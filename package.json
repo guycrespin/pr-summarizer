@@ -7,7 +7,7 @@
     "watch": "node scripts/build.mjs --watch",
     "typecheck": "tsc --noEmit",
     "check": "esbuild scripts/check.mjs --bundle --platform=node --format=esm --log-level=warning --outfile=dist/check.mjs && node dist/check.mjs",
-    "test:e2e": "npm run build && esbuild scripts/e2e.mjs --bundle --platform=node --format=esm --external:playwright --log-level=warning --outfile=dist/e2e.mjs && node dist/e2e.mjs",
+    "test:e2e": "BA_BACKEND=http://127.0.0.1:9394 npm run build && esbuild scripts/e2e.mjs --bundle --platform=node --format=esm --external:playwright --log-level=warning --outfile=dist/e2e.mjs && node dist/e2e.mjs",
     "package": "node scripts/package.mjs"
   },
   "dependencies": {

@@ -74,6 +74,41 @@ import { messagesToOpenAI, toolsToOpenAI, cleanBaseURL } from "../src/providers"
 }
 console.log("providers: all checks passed");
 
+// ---------- 後端記帳標頭 ----------
+import { baHeaders, charsOf, isQuota, PAGE_TOOLS, ACTION_TOOLS } from "../src/usage";
+{
+  assert.deepEqual(baHeaders("task", "sid", { pages: 3, actions: 12, chars: 40211 }), { "x-ba-session": "sid", "x-ba-kind": "task", "x-ba-stats": "pages=3;actions=12;chars=40211" });
+  assert.equal(baHeaders("aux", "s", { pages: 0, actions: 0, chars: 0 })["x-ba-kind"], "aux");
+  assert.equal(charsOf("字".repeat(5)), 5);
+  assert.equal(charsOf([{ type: "text", text: "abc" }, { type: "document" }, { type: "text", text: "de" }]), 5);
+  assert.equal(charsOf(undefined), 0);
+  assert.deepEqual([PAGE_TOOLS, ACTION_TOOLS], [["read_page"], ["navigate", "click", "type", "scroll"]]);
+  assert.equal(isQuota({ status: 402, error: { type: "error", error: { type: "quota_exceeded" } } }), true);
+  assert.equal(isQuota({ status: 402, error: { error: { type: "other" } } }), false);
+  assert.equal(isQuota({ status: 401, error: { error: { type: "quota_exceeded" } } }), false);
+  assert.equal(isQuota(new Error("x")), false);
+}
+console.log("usage: all checks passed");
+
+// ---------- 模式：全新安裝 cloud；升級前設定過金鑰或自訂位址的舊使用者維持 byok ----------
+import { detectMode } from "../src/mode";
+{
+  assert.equal(detectMode({}), "cloud", "全新安裝");
+  assert.equal(detectMode({ key: "sk-ant-x" }), "byok", "最舊版：只有 key 欄位");
+  assert.equal(detectMode({ key: "  " }), "cloud", "空白金鑰不算設定過");
+  assert.equal(detectMode({ providers: { anthropic: { key: "sk-ant-x" } } }), "byok");
+  assert.equal(detectMode({ provider: "openai", providers: { openai: { key: "sk-x", model: "gpt-5" } } }), "byok");
+  assert.equal(detectMode({ providers: { custom: { baseURL: "http://localhost:11434/v1" } } }), "byok", "自訂位址（本機伺服器不需要金鑰）");
+  assert.equal(detectMode({ providers: { anthropic: { model: "claude-opus-5" } } }), "cloud", "只挑過模型、沒填金鑰");
+  assert.equal(detectMode({ provider: "gemini", providers: {} }), "cloud", "只選過供應商、沒填金鑰");
+  assert.equal(detectMode({ mode: "cloud", key: "sk-ant-x", providers: { anthropic: { key: "sk-ant-x" } } }), "cloud", "已經存過模式：照存的（使用者自己切到 cloud，金鑰還留著）");
+  assert.equal(detectMode({ mode: "byok" }), "byok");
+  assert.equal(detectMode({ mode: "weird", key: "k" }), "byok", "不認得的值當作沒存過");
+  assert.equal(detectMode({ providers: null }), "cloud");
+}
+console.log("mode: all checks passed");
+
+
 // ---------- 記憶 ----------
 let r = addMemory([], "  我叫  Eason ");
 assert.deepEqual(r.list, ["我叫 Eason"]);
