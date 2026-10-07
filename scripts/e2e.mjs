@@ -1183,6 +1183,99 @@ try {
   await panel.waitForSelector("#input", { state: "attached" });
   await shot("chat-empty");
 
+  // ---------- cloud 的模型選單：只列後端 /v1/me 給的清單（名稱、說明、點數、鎖頭、預設都來自後端）----------
+  const CREDITS = (n) => zhTW["model.credits"].replace("{n}", n); // 「2 點／任務」
+  const MODELS1 = [
+    { id: "claude-sonnet-5-5", label: "Sonnet 5.5 Pro", tier: "balanced", credits: 2, locked: true }, // 內建的 id，但後台改了名字、這個方案鎖住
+    { id: "claude-test-fast", label: "快速測試", tier: "fast", credits: 1, locked: false }, // 內建清單裡沒有的 id；後台設的預設
+    { id: "claude-opus-5-5", label: "Opus 5.5", tier: "best", credits: 5, locked: false },
+    { id: "claude-old-style", label: "舊格式", tier: "balanced", locked: false }, // 舊版後端沒有 credits 欄位：不顯示點數、不報錯
+  ];
+  const modelRows = () => panel.locator("#model-list [role=option]").evaluateAll((els) => els.map((e) => ({
+    value: e.dataset.value, label: e.querySelector(".sel-label").textContent, small: [...e.querySelectorAll("small")].map((x) => x.textContent),
+    locked: "locked" in e.dataset, selected: e.getAttribute("aria-selected"),
+  })));
+  const pageErrors = []; panel.on("pageerror", (e) => pageErrors.push(e.message));
+  meState = { ...meState, models: MODELS1, default_model: "claude-test-fast" };
+  // 存的是 Sonnet，而清單裡 Sonnet 被鎖住 → 用 default_model
+  await panel.evaluate(() => chrome.storage.local.set({ providers: { anthropic: { model: "claude-sonnet-5-5" } } }));
+  await panel.reload();
+  await panel.waitForSelector("#input", { state: "attached" });
+  await until(async () => (await panel.locator("#model").textContent()) === "快速測試", "存的模型被鎖住：選單要顯示 default_model");
+  await panel.click("#model");
+  assert.deepEqual(await modelRows(), [
+    { value: "claude-sonnet-5-5", label: "Sonnet 5.5 Pro", small: [`${zhTW["model.hint.sonnet"]} · ${CREDITS(2)}`, zhTW["model.locked"]], locked: true, selected: "false" },
+    { value: "claude-test-fast", label: "快速測試", small: [`${zhTW["model.hint.haiku"]} · ${CREDITS(1)}`], locked: false, selected: "true" },
+    { value: "claude-opus-5-5", label: "Opus 5.5", small: [`${zhTW["model.hint.opus"]} · ${CREDITS(5)}`], locked: false, selected: "false" },
+    { value: "claude-old-style", label: "舊格式", small: [zhTW["model.hint.sonnet"]], locked: false, selected: "false" },
+  ], "選單恰好是後端給的清單：label 照原樣、說明照 tier、點數照 credits、被鎖的有「需升級方案」");
+  const pickerText = await panel.locator("#model-list").textContent();
+  assert.ok(pickerText.includes("2 點／任務") && pickerText.includes("1 點／任務") && pickerText.includes("5 點／任務"), "選單看得到「N 點／任務」");
+  assert.ok(pickerText.includes("需升級方案"));
+  assert.equal(await panel.locator("#model-list [data-locked] svg rect").count(), 1, "只有被鎖的那個畫鎖頭");
+  assert.equal(await panel.locator("#model-list [data-value=claude-old-style] small").count(), 1, "沒有 credits：只有說明、沒有點數");
+  assert.ok(!pickerText.includes("Haiku 5.5"), "清單以外的內建模型不出現");
+  await shot("model-picker-cloud");
+  // 選沒鎖的 Opus → 存起來
+  await panel.locator("#model-list [data-value=claude-opus-5-5]").click();
+  assert.equal(await panel.locator("#model").textContent(), "Opus 5.5");
+  const savedModel = async () => (await panel.evaluate(() => chrome.storage.local.get("providers"))).providers.anthropic.model;
+  assert.equal(await savedModel(), "claude-opus-5-5");
+  // 點被鎖的：開 upgrade_url、不能選（選單與存起來的模型都不變）
+  await panel.click("#model");
+  const lockedUpgrade = ctx.waitForEvent("page");
+  await panel.locator("#model-list [data-value=claude-sonnet-5-5]").click();
+  const lockedPage = await lockedUpgrade;
+  await lockedPage.waitForURL(meState.upgrade_url);
+  await lockedPage.close(); await panel.bringToFront();
+  assert.equal(await panel.locator("#model").textContent(), "Opus 5.5", "被鎖的不能選");
+  assert.equal(await savedModel(), "claude-opus-5-5", "被鎖的不會存起來");
+  assert.equal(await panel.locator("#model-list").count(), 0, "點了之後選單關閉");
+  // 送出的請求用選單選的模型
+  await run("一般問題", []);
+  await idle();
+  assert.equal(reqs[0].model, "claude-opus-5-5", "選了 Opus：請求用 Opus");
+  // 後端改了（Opus 變成要升級、預設的名字換了）：任務結束重抓 /v1/me，選單跟著變；存的 Opus 被鎖住 → 改用 default_model
+  const MODELS2 = MODELS1.map((m) => (m.id === "claude-opus-5-5" ? { ...m, locked: true } : m.id === "claude-test-fast" ? { ...m, label: "快速測試 2" } : m));
+  meState = { ...meState, models: MODELS2 };
+  await run("再問一次", []);
+  await idle();
+  await until(async () => (await panel.locator("#model").textContent()) === "快速測試 2", "任務結束重抓 /v1/me 後，選單要跟著後端的清單變");
+  await run("第三次", []);
+  await idle();
+  assert.equal(reqs[0].model, "claude-test-fast", "存的 Opus 被鎖住：請求用 default_model，不是被鎖的 Opus");
+  await panel.click("#model");
+  assert.deepEqual((await modelRows()).map((r) => [r.label, r.locked, r.selected]), [["Sonnet 5.5 Pro", true, "false"], ["快速測試 2", false, "true"], ["Opus 5.5", true, "false"], ["舊格式", false, "false"]]);
+  await panel.keyboard.press("Escape");
+  // 402 model_not_in_plan（方案不含所選的模型）：對話裡顯示說明＋升級按鈕（不是原始錯誤），並重抓 /v1/me
+  const MODELS3 = [...MODELS2.map((m) => (m.id === "claude-test-fast" ? { ...m, label: "快速測試 3" } : m)), { id: "claude-haiku-5-5", label: "Haiku 5.5", tier: "fast", credits: 1, locked: true }];
+  meState = { ...meState, models: MODELS3 };
+  const routeNotInPlan = (route) => route.fulfill(jsonErr(402, "model_not_in_plan", "Model not available on your plan"));
+  await ctx.route(`${BACKEND}/v1/messages**`, routeNotInPlan);
+  const meBeforeModel402 = be.me.length;
+  await run("方案外的模型", []);
+  await until(() => panel.locator("#quota-card").isVisible(), "402 model_not_in_plan 沒顯示卡片");
+  assert.equal(await panel.locator("#quota-card").getAttribute("data-why"), "model");
+  assert.equal(await panel.locator("#quota-card strong").textContent(), zhTW["quota.modelTitle"]);
+  assert.equal(await panel.locator("#quota-card span").textContent(), zhTW["quota.modelBody"]);
+  assert.equal(await panel.locator("#quota-upgrade").textContent(), zhTW["account.upgrade"]);
+  assert.equal(await panel.locator("#log .msg.error").count(), 0, "不顯示原始錯誤");
+  assert.ok(!(await panel.locator("#log").textContent()).includes("model_not_in_plan"));
+  await until(() => be.me.length > meBeforeModel402, "402 model_not_in_plan 之後要重抓 /v1/me");
+  await until(async () => (await panel.locator("#model").textContent()) === "快速測試 3", "重抓後選單更新");
+  await shot("quota-card-model");
+  const upgradePage4 = ctx.waitForEvent("page");
+  await panel.click("#quota-upgrade");
+  const upgraded4 = await upgradePage4;
+  await upgraded4.waitForURL(meState.upgrade_url);
+  await upgraded4.close(); await panel.bringToFront();
+  await ctx.unroute(`${BACKEND}/v1/messages**`, routeNotInPlan);
+  // 技能指定的 model（/summarize 預設 model: haiku）：Haiku 在清單裡被鎖住 → 不能照送，用選單的模型
+  await run("/summarize", []);
+  await idle();
+  assert.equal(reqs[0].model, "claude-test-fast", "技能的 haiku 被鎖住：用 default_model");
+  assert.deepEqual(pageErrors, [], "整段沒有未捕捉的錯誤");
+
   // ---------- 設定頁進階區塊：新使用者自己從 cloud 切到 byok（沒有任何金鑰時開關不能打開）----------
   await panel.evaluate(() => chrome.storage.local.remove(["key", "model", "provider", "providers"]));
   await panel.reload();
@@ -1209,6 +1302,15 @@ try {
   await settle();
   const touchesD = touches();
   await panel.keyboard.press("Escape");
+  // byok 的選單不受影響：上面那份 cloud 清單還留在記憶體裡（S.me），byok 照舊是內建三個，沒有鎖頭、沒有點數
+  assert.equal(await panel.locator("#model").textContent(), "Sonnet 5.5");
+  await panel.click("#model");
+  assert.deepEqual((await modelRows()).map((r) => [r.value, r.label, r.small, r.locked]), [
+    ["claude-sonnet-5-5", "Sonnet 5.5", [zhTW["model.hint.sonnet"]], false],
+    ["claude-opus-5-5", "Opus 5.5", [zhTW["model.hint.opus"]], false],
+    ["claude-haiku-5-5", "Haiku 5.5", [zhTW["model.hint.haiku"]], false],
+  ]);
+  await panel.keyboard.press("Escape");
   byokReqs.length = 0;
   await panel.click("#reset");
   await panel.fill("#input", "用自己的 key"); await panel.click("#send");
@@ -1224,6 +1326,7 @@ try {
   assert.deepEqual(await panel.evaluate(() => chrome.storage.local.get("mode")), { mode: "cloud" });
   assert.equal((await panel.evaluate(() => chrome.storage.local.get("providers"))).providers.anthropic.key, "sk-ant-ui-test", "切回 cloud：自己的金鑰留著");
   await panel.keyboard.press("Escape");
+  meState = { ...meState, models: undefined, default_model: undefined }; // 模型清單的測試到此為止：後面回到沒有 models 的舊格式
 
   // ---------- byok：自訂（OpenAI 相容）供應商：首次設定選供應商 → 動態模型清單 → 跑一個會呼叫工具的任務 ----------
   // 這一整段是 byok：請求只送到假的 OpenAI 相容伺服器，不帶 x-ba-*，沒有任何請求打到後端位址
