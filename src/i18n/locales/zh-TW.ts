@@ -67,7 +67,7 @@ const zhTW: Dict = {
   "stats.input": "輸入 {n}",
   "stats.cached": "（快取 {n}）",
   "stats.output": "輸出 {n} token",
-  "stats.hint": "這次任務的用量；快取讀取的輸入只算一成價",
+  "stats.hint": "這次任務的用量；快取讀取的輸入價格低很多",
 
   "confirm.click": "Agent 要點擊「{label}」。\n\n這可能是送出、付款或刪除這類不可逆的動作，允許嗎？",
   "confirm.submit": "Agent 要送出表單「{label}」。\n\n這可能是送出、付款或刪除這類不可逆的動作，允許嗎？",

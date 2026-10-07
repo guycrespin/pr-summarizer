@@ -68,7 +68,7 @@ const en = {
   "stats.input": "in {n}",
   "stats.cached": " (cached {n})",
   "stats.output": "out {n} tokens",
-  "stats.hint": "Usage for this task; cached input is billed at one tenth of the price",
+  "stats.hint": "Usage for this task; cached input is billed at a much lower price",
 
   "confirm.click": "The agent wants to click “{label}”.\n\nThis may be irreversible (submitting, paying or deleting). Allow it?",
   "confirm.submit": "The agent wants to submit the form “{label}”.\n\nThis may be irreversible (submitting, paying or deleting). Allow it?",

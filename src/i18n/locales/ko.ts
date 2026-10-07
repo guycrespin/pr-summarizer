@@ -63,7 +63,7 @@ const ko: Dict = {
   "stats.input": "입력 {n}",
   "stats.cached": "（캐시 {n}）",
   "stats.output": "출력 {n} 토큰",
-  "stats.hint": "이번 작업의 사용량; 캐시된 입력은 10분의 1 가격으로 청구됩니다",
+  "stats.hint": "이번 작업의 사용량; 캐시된 입력은 훨씬 낮은 가격으로 청구됩니다",
   "confirm.click": "에이전트가 “{label}”을(를) 클릭하려고 합니다.\n\n제출, 결제, 삭제 등 되돌릴 수 없는 작업일 수 있어요. 허용하시겠어요?",
   "confirm.submit": "에이전트가 “{label}” 양식을 제출하려고 합니다.\n\n제출, 결제, 삭제 등 되돌릴 수 없는 작업일 수 있어요. 허용하시겠어요?",
   "confirm.form": "양식",

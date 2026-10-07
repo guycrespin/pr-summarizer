@@ -67,7 +67,7 @@ const it: Dict = {
   "stats.input": "input {n}",
   "stats.cached": " (in cache {n})",
   "stats.output": "output {n} token",
-  "stats.hint": "Consumo di questa attività; l'input in cache costa un decimo del prezzo",
+  "stats.hint": "Consumo di questa attività; l'input in cache costa molto meno",
 
   "confirm.click": "L'agente vuole cliccare su “{label}”.\n\nPotrebbe essere irreversibile (inviare, pagare o eliminare qualcosa). Consentire?",
   "confirm.submit": "L'agente vuole inviare il modulo “{label}”.\n\nPotrebbe essere irreversibile (inviare, pagare o eliminare qualcosa). Consentire?",

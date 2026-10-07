@@ -67,7 +67,7 @@ const ptBR: Dict = {
   "stats.input": "entrada {n}",
   "stats.cached": " (em cache {n})",
   "stats.output": "saída {n} tokens",
-  "stats.hint": "Uso desta tarefa; entrada em cache é cobrada a um décimo do preço",
+  "stats.hint": "Uso desta tarefa; entrada em cache é cobrada por um preço bem menor",
 
   "confirm.click": "O agente quer clicar em “{label}”.\n\nIsso pode ser irreversível (enviar, pagar ou excluir algo). Permitir?",
   "confirm.submit": "O agente quer enviar o formulário “{label}”.\n\nIsso pode ser irreversível (enviar, pagar ou excluir algo). Permitir?",

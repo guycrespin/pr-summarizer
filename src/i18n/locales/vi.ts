@@ -63,7 +63,7 @@ const vi: Dict = {
   "stats.input": "vào {n}",
   "stats.cached": " (đã lưu đệm {n})",
   "stats.output": "ra {n} token",
-  "stats.hint": "Mức sử dụng cho tác vụ này; đầu vào đã lưu đệm được tính giá bằng một phần mười",
+  "stats.hint": "Mức sử dụng cho tác vụ này; đầu vào đã lưu đệm được tính giá rẻ hơn nhiều",
   "confirm.click": "Trợ lý muốn nhấp vào “{label}”.\n\nĐây có thể là hành động không thể hoàn tác (gửi, thanh toán hoặc xóa). Cho phép chứ?",
   "confirm.submit": "Trợ lý muốn gửi biểu mẫu “{label}”.\n\nĐây có thể là hành động không thể hoàn tác (gửi, thanh toán hoặc xóa). Cho phép chứ?",
   "confirm.form": "biểu mẫu",

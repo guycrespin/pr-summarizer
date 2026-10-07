@@ -67,7 +67,7 @@ const fr: Dict = {
   "stats.input": "entrée {n}",
   "stats.cached": " (en cache {n})",
   "stats.output": "sortie {n} tokens",
-  "stats.hint": "Consommation de cette tâche ; l'entrée en cache est facturée au dixième du prix",
+  "stats.hint": "Consommation de cette tâche ; l'entrée en cache est facturée à un prix bien plus bas",
 
   "confirm.click": "L'agent veut cliquer sur « {label} ».\n\nCela peut être irréversible (envoi, paiement ou suppression). Autoriser ?",
   "confirm.submit": "L'agent veut envoyer le formulaire « {label} ».\n\nCela peut être irréversible (envoi, paiement ou suppression). Autoriser ?",

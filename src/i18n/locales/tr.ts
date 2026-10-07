@@ -67,7 +67,7 @@ const tr: Dict = {
   "stats.input": "giriş {n}",
   "stats.cached": " (önbellek {n})",
   "stats.output": "çıkış {n} token",
-  "stats.hint": "Bu görevin kullanımı; önbellekten okunan girişler fiyatın onda biri kadar ücretlendirilir",
+  "stats.hint": "Bu görevin kullanımı; önbellekten okunan girişler çok daha düşük ücretlendirilir",
 
   "confirm.click": "Ajan “{label}” öğesine tıklamak istiyor.\n\nBu, geri alınamaz bir işlem olabilir (gönderme, ödeme veya silme). İzin veriyor musunuz?",
   "confirm.submit": "Ajan “{label}” formunu göndermek istiyor.\n\nBu, geri alınamaz bir işlem olabilir (gönderme, ödeme veya silme). İzin veriyor musunuz?",

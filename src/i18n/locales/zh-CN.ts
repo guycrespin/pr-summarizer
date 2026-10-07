@@ -63,7 +63,7 @@ const zhCN: Dict = {
   "stats.input": "输入 {n}",
   "stats.cached": "（缓存 {n}）",
   "stats.output": "输出 {n} token",
-  "stats.hint": "本次任务的用量；缓存读取的输入按十分之一计价",
+  "stats.hint": "本次任务的用量；缓存读取的输入价格低很多",
   "confirm.click": "Agent 想要点击「{label}」。\n\n这可能是提交、付款或删除等不可逆操作，是否允许？",
   "confirm.submit": "Agent 想要提交表单「{label}」。\n\n这可能是提交、付款或删除等不可逆操作，是否允许？",
   "confirm.form": "表单",

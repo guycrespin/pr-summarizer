@@ -67,7 +67,7 @@ const de: Dict = {
   "stats.input": "Eingabe {n}",
   "stats.cached": " (Cache {n})",
   "stats.output": "Ausgabe {n} Token",
-  "stats.hint": "Verbrauch für diese Aufgabe; zwischengespeicherte Eingabe kostet nur ein Zehntel",
+  "stats.hint": "Verbrauch für diese Aufgabe; zwischengespeicherte Eingabe kostet deutlich weniger",
 
   "confirm.click": "Der Agent möchte auf „{label}“ klicken.\n\nDas könnte unumkehrbar sein (Absenden, Zahlen oder Löschen). Erlauben?",
   "confirm.submit": "Der Agent möchte das Formular „{label}“ absenden.\n\nDas könnte unumkehrbar sein (Absenden, Zahlen oder Löschen). Erlauben?",

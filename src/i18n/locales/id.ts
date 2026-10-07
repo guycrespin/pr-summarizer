@@ -63,7 +63,7 @@ const id: Dict = {
   "stats.input": "masuk {n}",
   "stats.cached": " (cache {n})",
   "stats.output": "keluar {n} token",
-  "stats.hint": "Pemakaian untuk tugas ini; input yang di-cache ditagih sepersepuluh harga",
+  "stats.hint": "Pemakaian untuk tugas ini; input yang di-cache ditagih dengan harga jauh lebih murah",
   "confirm.click": "Agen ingin mengklik “{label}”.\n\nIni mungkin tindakan yang tidak bisa dibatalkan (mengirim, membayar, atau menghapus). Izinkan?",
   "confirm.submit": "Agen ingin mengirim formulir “{label}”.\n\nIni mungkin tindakan yang tidak bisa dibatalkan (mengirim, membayar, atau menghapus). Izinkan?",
   "confirm.form": "formulir",
