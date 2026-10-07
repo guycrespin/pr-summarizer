@@ -70,7 +70,10 @@ await new Promise((r) => server.once("listening", r));
 const BACKEND = "http://127.0.0.1:9394";
 const be = { devices: [], me: [], pages: [] }; // 收到的請求：devices 是請求本體、me 是帶來的 x-api-key、pages 是 /welcome 與 /upgrade
 const issued = new Set();
-let meState = { user_id: "u-1", plan: "free", credits_used: 7, credits_limit: 20, period_end: "2026-10-31", kol_code: "MATTHEW", upgrade_url: `${BACKEND}/upgrade?u=u-1` };
+let meState = {
+  user_id: "u-1", plan: "free", credits_used: 7, credits_limit: 20, period_end: "2026-10-31", kol_code: "MATTHEW", upgrade_url: `${BACKEND}/upgrade?u=u-1`,
+  read_levels: [{ chars: 8000, credits: 0 }, { chars: 15000, credits: 1 }, { chars: 30000, credits: 2 }], default_read_chars: 8000, // 讀頁字數的三檔（契約：saas-v2.md 第 2 節）；models 在需要的測試裡才加
+};
 const backendSrv = http.createServer(async (q, r) => {
   let raw = "";
   for await (const c of q) raw += c;
@@ -374,6 +377,7 @@ try {
     assert.match(h["x-ba-session"], /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     assert.equal(h["x-ba-kind"], "task");
     assert.match(h["x-ba-stats"], /^pages=\d+;actions=\d+;chars=\d+$/);
+    assert.equal(h["x-ba-read-chars"], "8000", "每次呼叫都帶目前那一檔的讀頁字數（預設 8000）");
   }
   assert.equal(new Set(msgHeaders.map((h) => h["x-ba-session"])).size, 1, "一個任務一個 session");
   assert.equal(msgHeaders[0]["x-ba-stats"], "pages=0;actions=0;chars=0", "第一次呼叫：還沒讀過頁面");
@@ -522,6 +526,7 @@ try {
   await panel.click("#byok-summary"); // 收合（後面的下拉選單測試還在設定首頁裡）
 
   // 自訂下拉選單：鍵盤開關與選取、打字跳選、Esc 焦點回到觸發鈕、選項多時可搜尋
+  // （cloud 的讀頁字數選單是 /v1/me 的三檔 8,000／15,000／30,000；byok 原本的五個選項在 byok 那一段驗）
   const pageChars = async () => (await panel.evaluate(() => chrome.storage.local.get("pageChars"))).pageChars;
   // 窄視窗（SHOTS=360px）下設定頁比一個畫面長：先捲到看得到並等 scroll 事件過去，否則 focus() 造成的捲動會在選單打開後才送到、把它關掉
   await panel.locator("#page-chars").scrollIntoViewIfNeeded();
@@ -537,29 +542,32 @@ try {
   assert.equal(await panel.locator('#page-chars-list [aria-selected="true"] svg').count(), 1, "目前的值打勾");
   await shot("select-pagechars");
   await panel.keyboard.press("ArrowDown");
-  assert.equal(await panel.locator("#page-chars-list").getAttribute("aria-activedescendant"), "page-chars-opt-3");
+  assert.equal(await panel.locator("#page-chars-list").getAttribute("aria-activedescendant"), "page-chars-opt-1");
   await panel.keyboard.press("Enter");
   assert.equal(await panel.locator("#page-chars-list").count(), 0, "Enter 選取後關閉");
   assert.equal(await pageChars(), 15000);
   assert.equal(await panel.evaluate(() => document.activeElement?.id), "page-chars", "選完焦點回到觸發鈕");
   await panel.keyboard.press("Enter");
   await panel.keyboard.type("3");
-  assert.equal(await panel.locator("#page-chars-list [data-active]").getAttribute("data-value"), "3000", "打字跳到開頭相符的選項");
+  assert.equal(await panel.locator("#page-chars-list [data-active]").getAttribute("data-value"), "30000", "打字跳到開頭相符的選項");
   await panel.keyboard.press(" ");
-  assert.equal(await pageChars(), 3000, "空白鍵選取");
+  assert.equal(await pageChars(), 30000, "空白鍵選取");
   await panel.keyboard.press("Enter");
   await panel.keyboard.press("End");
   assert.equal(await panel.locator("#page-chars-list [data-active]").getAttribute("data-value"), "30000");
   await panel.keyboard.press("Home");
-  assert.equal(await panel.locator("#page-chars-list [data-active]").getAttribute("data-value"), "3000");
+  assert.equal(await panel.locator("#page-chars-list [data-active]").getAttribute("data-value"), "8000");
   await panel.keyboard.press("Escape");
   assert.equal(await panel.locator("#page-chars-list").count(), 0, "Esc 關閉選單");
   assert.equal(await panel.evaluate(() => document.activeElement?.id), "page-chars", "Esc 焦點回到觸發鈕");
   assert.ok(await panel.locator("#settings").isVisible(), "Esc 只關選單，不離開設定頁");
-  assert.equal(await pageChars(), 3000, "Esc 不改值");
+  assert.equal(await pageChars(), 30000, "Esc 不改值");
   await panel.click("#page-chars");
   await panel.mouse.click(5, 5);
   assert.equal(await panel.locator("#page-chars-list").count(), 0, "點外面關閉");
+  await panel.click("#page-chars"); // 選回預設 8,000：記憶體與儲存區都回到預設，後面的測試假設如此
+  await panel.locator('#page-chars-list [data-value="8000"]').click();
+  assert.equal(await pageChars(), 8000);
   // 語言有 16 個選項：出現篩選框
   await panel.click("#lang");
   assert.equal(await panel.evaluate(() => document.activeElement?.className), "sel-search", "選項多時焦點在篩選框");
@@ -826,6 +834,7 @@ try {
   await until(async () => /惡意建議/.test(await panel.locator("#suggestions").textContent()), "頁面建議沒出現");
   assert.equal(suggestHeaders["x-ba-kind"], "aux", "自動發出的首頁建議帶 x-ba-kind: aux");
   assert.equal(suggestHeaders["x-ba-stats"], "pages=0;actions=0;chars=0");
+  assert.equal(suggestHeaders["x-ba-read-chars"], "8000", "aux 也帶（伺服器不會用）");
   assert.match(suggestHeaders["x-ba-session"], /^[0-9a-f-]{36}$/);
   assert.equal(suggestHeaders["x-api-key"], devToken);
   assert.equal(suggestBody.model, "claude-haiku-5-5", "首頁建議用 Haiku 5.5");
@@ -1274,6 +1283,61 @@ try {
   await run("/summarize", []);
   await idle();
   assert.equal(reqs[0].model, "claude-test-fast", "技能的 haiku 被鎖住：用 default_model");
+  // ---------- cloud 的讀頁字數上限：只列 /v1/me 的檔位（每檔顯示字數，加點大於 0 才標「＋M 點／任務」）----------
+  // 一個超過 8000 字的頁面：在 8,000、15,000 兩檔各讀一次，read_page 回傳的長度上限跟著變，每次 /v1/messages 都帶 x-ba-read-chars
+  const levelRows = () => panel.locator("#page-chars-list [role=option]").evaluateAll((els) => els.map((e) => ({
+    value: e.dataset.value, label: e.querySelector(".sel-label").textContent, small: [...e.querySelectorAll("small")].map((x) => x.textContent), selected: e.getAttribute("aria-selected"),
+  })));
+  const readHdrs = [];
+  const trackRead = async (route) => { readHdrs.push(route.request().headers()["x-ba-read-chars"]); await route.fallback(); };
+  await ctx.route(`${BACKEND}/v1/messages**`, trackRead);
+  await test.evaluate(() => document.body.insertAdjacentHTML("afterbegin", `<p id=longp>${"字".repeat(20000)}</p>`));
+  const READ_PAGE = [{ type: "tool_use", id: "rd", name: "read_page", input: {} }];
+  const openPageChars = async () => { await panel.click("#open-settings"); await panel.locator("#page-chars").scrollIntoViewIfNeeded(); await panel.waitForTimeout(150); await panel.click("#page-chars"); };
+  await openPageChars();
+  assert.equal(await panel.locator("#page-chars").textContent(), "8,000 字", "預設那一檔");
+  assert.deepEqual(await levelRows(), [
+    { value: "8000", label: "8,000 字", small: [], selected: "true" },
+    { value: "15000", label: "15,000 字", small: ["＋1 點／任務"], selected: "false" },
+    { value: "30000", label: "30,000 字", small: ["＋2 點／任務"], selected: "false" },
+  ], "cloud 的選單恰好是後端的三檔：加點大於 0 才標「＋M 點／任務」");
+  assert.equal(zhTW["settings.readExtra"].replace("{n}", "1"), "＋1 點／任務");
+  await shot("select-pagechars-cloud");
+  await panel.keyboard.press("Escape");
+  await panel.keyboard.press("Escape"); // 關設定頁
+  await run("讀這頁", READ_PAGE);
+  await idle();
+  const read8 = lastResult();
+  assert.match(read8, /\[第 0–8000 字，全文 \d+ 字/, "預設 8,000：讀 8000 字");
+  assert.ok(read8.length > 8000 && read8.length < 8400, `8,000 檔：回傳長度 ${read8.length}`);
+  assert.equal(readHdrs.length, 2);
+  assert.deepEqual([...new Set(readHdrs)], ["8000"], "每次呼叫都帶 x-ba-read-chars: 8000");
+  // 選 15,000：存起來、請求帶 15000、read_page 讀到 15000 字
+  await openPageChars();
+  await panel.locator('#page-chars-list [data-value="15000"]').click();
+  assert.equal(await panel.locator("#page-chars").textContent(), "15,000 字");
+  assert.equal(await pageChars(), 15000, "選了之後存的就是那一檔的字數");
+  await panel.keyboard.press("Escape"); // 關設定頁
+  readHdrs.length = 0;
+  await run("再讀一次", READ_PAGE);
+  await idle();
+  const read15 = lastResult();
+  assert.match(read15, /\[第 0–15000 字，全文 \d+ 字/, "15,000 檔：讀 15000 字");
+  assert.ok(read15.length > 15000 && read15.length < 15400, `15,000 檔：回傳長度 ${read15.length}`);
+  assert.equal(readHdrs.length, 2);
+  assert.deepEqual([...new Set(readHdrs)], ["15000"], "請求帶 x-ba-read-chars: 15000");
+  // 存過的值不在清單裡（例如 byok 時設過的 3000）→ default_read_chars
+  await panel.evaluate(() => chrome.storage.local.set({ pageChars: 3000 }));
+  await panel.reload();
+  await panel.waitForSelector("#input", { state: "attached" });
+  readHdrs.length = 0;
+  await run("存的不在清單裡", READ_PAGE);
+  await idle();
+  assert.match(lastResult(), /\[第 0–8000 字/, "存的 3000 不在清單裡：用預設 8,000");
+  assert.deepEqual([...new Set(readHdrs)], ["8000"]);
+  assert.equal(await pageChars(), 3000, "只是不採用，byok 設的值沒被蓋掉");
+  await ctx.unroute(`${BACKEND}/v1/messages**`, trackRead);
+  await test.evaluate(() => longp.remove());
   assert.deepEqual(pageErrors, [], "整段沒有未捕捉的錯誤");
 
   // ---------- 設定頁進階區塊：新使用者自己從 cloud 切到 byok（沒有任何金鑰時開關不能打開）----------
@@ -1299,6 +1363,18 @@ try {
   await until(async () => (await panel.evaluate(() => chrome.storage.local.get("mode"))).mode === "byok", "開關沒切到 byok");
   assert.equal(await panel.locator("#account-byok").textContent(), zhTW["account.byokNote"]);
   assert.match(await panel.locator("#byok-state").textContent(), /^使用中 · Anthropic · Sonnet 5.5$/);
+  // 讀頁字數上限在 byok 照舊是原本的五個選項、不扣點（記憶體裡留著 cloud 的檔位也不影響）；存的 3000 就是選中的那一個
+  await panel.locator("#page-chars").scrollIntoViewIfNeeded();
+  await panel.waitForTimeout(150);
+  await panel.click("#page-chars");
+  assert.deepEqual(await levelRows(), [
+    { value: "3000", label: "3,000（最省）", small: [], selected: "true" },
+    { value: "5000", label: "5,000", small: [], selected: "false" },
+    { value: "8000", label: "8,000（預設）", small: [], selected: "false" },
+    { value: "15000", label: "15,000", small: [], selected: "false" },
+    { value: "30000", label: "30,000（最完整）", small: [], selected: "false" },
+  ]);
+  await panel.keyboard.press("Escape");
   await settle();
   const touchesD = touches();
   await panel.keyboard.press("Escape");
