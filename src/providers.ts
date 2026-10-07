@@ -43,6 +43,9 @@ export const isHaiku = (model: string) => model.startsWith("claude-haiku");
 
 export const conf = (id: ProviderId = S.provider) => (S.providers[id] ??= {});
 
+// 現在實際用的供應商：cloud 模式固定是 Anthropic（走自家後端），byok 才看使用者選的
+export const activeProvider = (): ProviderId => (S.mode === "cloud" ? "anthropic" : S.provider);
+
 // 只接受 http(s)，去掉結尾的 /；不合格回 null
 export function cleanBaseURL(s: string | undefined): string | null {
   try {

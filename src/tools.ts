@@ -7,6 +7,7 @@ import { fetchPdf, openPdf, pdfText, isScanned, isPdfUrl, viewerFile, toBase64, 
 import { S, emit, addItem, setMemories, type AskItem, type AskInput, type ConfirmItem, type NoteItem } from "./store";
 import type { Block } from "./history";
 import { displayUrl, type Task } from "./shared";
+import { activeProvider } from "./providers";
 import { t } from "./i18n";
 
 export async function activeTab() {
@@ -148,8 +149,8 @@ async function readPdf(url: string, title: string, offset: number, signal?: Abor
       pdfCache = { url, text };
       return head + slice(text, offset);
     }
-    // 掃描檔：沒有文字層，只有 Anthropic 能直接吃 PDF（每頁當圖片看，比較貴）
-    if (S.provider !== "anthropic") userError(t("pdf.scanUnsupported"), "這是掃描檔（沒有文字層），目前的模型讀不了。已經告訴使用者了，不要再重試");
+    // 掃描檔：沒有文字層，只有 Anthropic 能直接吃 PDF（每頁當圖片看，比較貴）；cloud 模式固定走 Anthropic
+    if (activeProvider() !== "anthropic") userError(t("pdf.scanUnsupported"), "這是掃描檔（沒有文字層），目前的模型讀不了。已經告訴使用者了，不要再重試");
     if (doc.numPages > MAX_SCAN_PAGES || data.byteLength > MAX_SCAN_BYTES) {
       userError(t("pdf.scanTooLarge", { pages: MAX_SCAN_PAGES, size: fmtMB(MAX_SCAN_BYTES) }), "掃描檔太大，送不出去。已經告訴使用者了");
     }

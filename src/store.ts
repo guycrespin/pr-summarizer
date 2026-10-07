@@ -4,6 +4,8 @@ import { useSyncExternalStore } from "react";
 import type { Skill } from "./skills";
 import type { Chat, Message } from "./history";
 import type { ProviderId, ProviderConf } from "./providers";
+import type { Me } from "./backend";
+import type { Mode } from "./mode";
 
 export type UserItem = { id: number; kind: "user"; text: string; selection?: string }; // selection：這則附帶的頁面選取內容
 export type NoteItem = { id: number; kind: "error" | "note"; text: string };
@@ -21,15 +23,21 @@ export type FileItem = { id: number; kind: "file"; filename: string; content: st
 export type ConfirmItem = { id: number; kind: "confirm"; label: string; submitting: boolean; host: string; text?: string; aria?: string; mismatch?: boolean; detail?: string; state: "waiting" | "allowed" | "denied"; decide?: (ok: boolean) => void };
 export type MemoryItem = { id: number; kind: "memory"; op: "remember" | "forget"; text: string; undone?: boolean };
 export type PageItem = { id: number; kind: "page"; title: string; url: string; tabId: number };
-export type Item = UserItem | NoteItem | StatsItem | MdItem | ThinkingItem | ToolItem | PendingItem | AskItem | FileItem | ConfirmItem | MemoryItem | PageItem;
+// 額度用完（402 quota_exceeded）：對話裡顯示說明與升級按鈕
+export type QuotaItem = { id: number; kind: "quota" };
+export type Item = QuotaItem | UserItem | NoteItem | StatsItem | MdItem | ThinkingItem | ToolItem | PendingItem | AskItem | FileItem | ConfirmItem | MemoryItem | PageItem;
 
 export type Suggestion = { title: string; subtitle: string; prompt: string };
 
 export const S = {
   view: "consent" as "chat" | "onboard" | "consent",
   consent: false, // 醒目揭露同意（Chrome Web Store User Data 政策）：同意前不進 chat／onboard，也不送任何模型請求
-  provider: "anthropic" as ProviderId,
+  // cloud＝預設，免登入、走自家後端、扣點數；byok＝使用者自己的 API Key，直連供應商，完全不碰我們的後端（見 mode.ts）
+  mode: "cloud" as Mode,
+  provider: "anthropic" as ProviderId, // byok 用的供應商（cloud 固定是 Anthropic，見 providers.ts 的 activeProvider）
   providers: {} as Partial<Record<ProviderId, ProviderConf>>, // 各供應商的金鑰、base URL、模型；見 providers.ts
+  me: null as Me | null, // GET /v1/me（只有 cloud）：方案與本月點數；null＝還沒抓到（或抓失敗）
+  meError: false,
   effort: "high",
   pageChars: 8000, // 讀頁一次最多回傳的字數。中文約 1 字 1 token：整頁維基 5.5 萬字＝5 萬 token，一次摘要就要好幾塊台幣
   suggestOn: false,

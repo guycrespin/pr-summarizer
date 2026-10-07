@@ -2,15 +2,15 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { S, emit, useStore, type Suggestion } from "./store";
-import { init, send, resetChat, showView, persist, COMMANDS } from "./agent";
+import { init, send, resetChat, showView, persist, refreshMe, setMode, COMMANDS } from "./agent";
 import { refreshSelection, dismissSelection } from "./selection";
 import { viewerFor } from "./pdf";
 import { activeTab } from "./tools";
-import { PROVIDERS, PROVIDER_IDS, providerName, cleanBaseURL, conf, currentModel, isHaiku, type ProviderId } from "./providers";
+import { PROVIDERS, PROVIDER_IDS, activeProvider, providerName, cleanBaseURL, conf, currentModel, isHaiku, type ProviderId } from "./providers";
 import { Select } from "./select";
 import { t, currentLang } from "./i18n";
 import { LogList } from "./log";
-import { HistoryPage, SettingsPage, ProviderPage, MemoryPage, SkillsPage, SkillEditorPage, SkillItem, Toast, ModelSelect, type Route, type Nav } from "./pages";
+import { HistoryPage, SettingsPage, MemoryPage, SkillsPage, SkillEditorPage, SkillItem, Toast, ModelSelect, type Route, type Nav } from "./pages";
 import {
   IconGear, IconHistory, IconLines, IconLogo, IconPlus, IconSend, IconSpark, IconStop, IconTable, IconTranslate,
 } from "./icons";
@@ -49,13 +49,15 @@ function Consent() {
           S.consent = true;
           await persist({ consent: true });
           showView();
+          refreshMe(); // 只有 cloud 會真的打 /v1/me（也是在這裡才第一次需要帳號）
         }}>{t("consent.agree")}</button>
       </div>
     </section>
   );
 }
 
-// 首次使用：先選供應商，再填金鑰（自訂則填伺服器位址，金鑰選填）
+// 首次設定：只有「用自己的 API Key（byok）但還沒填好」才會到這裡（全新安裝是 cloud，直接進對話）。
+// 先選供應商，再填金鑰（自訂則填伺服器位址，金鑰選填）；也可以改用 Cloud
 function Onboard() {
   const [provider, setProvider] = useState<ProviderId>(S.provider);
   const [key, setKey] = useState("");
@@ -99,6 +101,7 @@ function Onboard() {
         {info.keyURL && <a className="text-link" href={info.keyURL} target="_blank" rel="noopener">{t("onboard.getKeyFrom", { name: info.name })}</a>}
         {custom && <div className="hint">{t("settings.localHint")}</div>}
         <div className="hint">{t("onboard.keyLocal")} {t("onboard.safety")}</div>
+        <button className="btn btn-ghost" type="button" id="onboard-cloud" onClick={() => setMode("cloud")}>{t("onboard.useCloud")}</button>
       </form>
     </section>
   );
@@ -211,9 +214,9 @@ function Composer() {
           }}
         />
         <div className="composer-bar">
-          <ModelSelect id="model" variant="bar" />
-          {/* effort 是 Anthropic 的參數；Haiku 4.5 不支援 effort 與自適應思考 */}
-          <Select id="effort" label={t("composer.effort")} title={t("composer.effortHint")} hidden={S.provider !== "anthropic" || isHaiku(currentModel())} value={S.effort}
+          <ModelSelect id="model" variant="bar" p={activeProvider()} />
+          {/* effort 是 Anthropic 的參數（cloud 固定是 Anthropic）；Haiku 4.5 不支援 effort 與自適應思考 */}
+          <Select id="effort" label={t("composer.effort")} title={t("composer.effortHint")} hidden={activeProvider() !== "anthropic" || isHaiku(currentModel(activeProvider()))} value={S.effort}
             options={(["low", "medium", "high", "xhigh", "max"] as const).map((v) => ({ value: v, label: t(`effort.${v}`), hint: t(`effort.hint.${v}`) }))}
             onChange={(v) => {
               S.effort = v;
@@ -277,7 +280,6 @@ function App() {
   const page = !top ? null
     : top.name === "history" ? <HistoryPage nav={nav} />
     : top.name === "settings" ? <SettingsPage nav={nav} />
-    : top.name === "provider" ? <ProviderPage nav={nav} />
     : top.name === "memory" ? <MemoryPage nav={nav} />
     : top.name === "skills" ? <SkillsPage nav={nav} />
     : <SkillEditorPage key={top.skill?.name ?? ""} skill={top.skill} nav={nav} />;

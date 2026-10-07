@@ -6,6 +6,7 @@ import DOMPurify from "dompurify";
 import { S, emit, setMemories, type Item, type MdItem, type ThinkingItem, type ToolItem, type AskItem, type FileItem, type ConfirmItem, type MemoryItem, type PageItem } from "./store";
 import { forgetMemory } from "./memory";
 import { t, currentLang, type Key } from "./i18n";
+import { openUpgrade } from "./pages";
 import { IconBookmark, IconCopy, IconDownload, IconErr, IconFile, IconGlobe, IconOk, IconQuestion, IconShield } from "./icons";
 
 // 連結文字看起來像網址／網域、但跟真正前往的網域不同（[bank.com](https://evil.example)）時要露出真網域
@@ -166,6 +167,17 @@ export function LogList({ items }: { items: Item[] }) {
   return <>{out}</>;
 }
 
+// 額度用完（402 quota_exceeded）：說明＋升級按鈕
+function QuotaCard() {
+  return (
+    <div className="msg quota" id="quota-card" role="alert">
+      <strong>{t("quota.title")}</strong>
+      <span>{t("quota.body")}</span>
+      <button type="button" className="btn btn-primary" id="quota-upgrade" onClick={openUpgrade}>{t("account.upgrade")}</button>
+    </div>
+  );
+}
+
 export function LogItem({ item }: { item: Item }) {
   switch (item.kind) {
     case "user":
@@ -184,6 +196,8 @@ export function LogItem({ item }: { item: Item }) {
     case "error":
     case "note":
       return <div className={`msg ${item.kind}`}>{item.text}</div>;
+    case "quota":
+      return <QuotaCard />;
     case "stats":
       return <div className="msg stats" title={item.title}>{item.text}</div>;
     case "md":

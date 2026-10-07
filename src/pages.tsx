@@ -1,19 +1,19 @@
 // 設定、歷史對話、技能編輯：佔滿側邊欄的整頁畫面（左上返回），由 App 用一個堆疊管理（設定 → 子頁 → 技能編輯）
 import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type ChangeEvent, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import { S, emit, setMemories, showToast } from "./store";
-import { persist, send, showView, openChat, deleteChat, resetChat, scheduleSuggestions, COMMANDS } from "./agent";
+import { persist, send, showView, openChat, deleteChat, resetChat, scheduleSuggestions, refreshMe, setMode, COMMANDS } from "./agent";
 import { addMemory, MAX_MEMORY_CHARS, MAX_MEMORIES } from "./memory";
 import { parseSkill, serializeSkill, cleanName, type Skill } from "./skills";
 import { toMarkdown, groupChats, MAX_CHATS, type Chat } from "./history";
 import { t, LANGS, langPref, setLangPref, currentLang, type Key } from "./i18n";
 import { IconBack, IconChevron, IconErr, IconMore, IconSearch } from "./icons";
 import { Select, type Opt } from "./select";
-import { ANTHROPIC_MODELS, PROVIDERS, PROVIDER_IDS, providerName, cleanBaseURL, baseURL, conf, currentModel, listModels, ready, type ProviderId } from "./providers";
+import { ANTHROPIC_MODELS, PROVIDERS, PROVIDER_IDS, activeProvider, providerName, cleanBaseURL, baseURL, conf, currentModel, listModels, ready, type ProviderId } from "./providers";
+import { BACKEND } from "./backend";
 
 export type Route =
   | { name: "history" }
   | { name: "settings" }
-  | { name: "provider" }
   | { name: "memory" }
   | { name: "skills" }
   | { name: "skill"; skill: Skill | null }; // skill 為 null＝新增
@@ -226,12 +226,11 @@ function NavRow({ id, title, value, onClick }: { id: string; title: string; valu
 }
 
 export function SettingsPage({ nav }: { nav: Nav }) {
-  const model = currentModel();
-  const account = providerName(S.provider) + (model ? ` · ${ANTHROPIC_MODELS.find((m) => m.value === model)?.label ?? model}` : "");
+  useEffect(() => { refreshMe(); }, []); // 每次打開設定都重抓：升級或換月後點數會變
   return (
     <Page id="settings" title={t("settings.title")} onBack={nav.pop}>
+      <AccountSection />
       <div className="list-group">
-        <NavRow id="settings-provider" title={t("settings.provider")} value={account} onClick={() => nav.push({ name: "provider" })} />
         <NavRow id="settings-memory" title={t("memory.title")} value={t(S.memoryOn ? "settings.memorySummaryOn" : "settings.memorySummaryOff", { n: S.memories.length })} onClick={() => nav.push({ name: "memory" })} />
         <NavRow id="settings-skills" title={t("skills.title")} value={t("settings.skillsSummary", { n: S.skills.length })} onClick={() => nav.push({ name: "skills" })} />
       </div>
@@ -262,7 +261,7 @@ export function SettingsPage({ nav }: { nav: Nav }) {
             }} />
         </div>
         <label className="list-row">
-          <span className="row-text">{t("settings.suggest")}<small>{S.provider === "anthropic" ? t("settings.suggestHint") : t("settings.suggestAnthropicOnly")}</small></span>
+          <span className="row-text">{t("settings.suggest")}<small>{activeProvider() === "anthropic" ? t("settings.suggestHint") : t("settings.suggestAnthropicOnly")}</small></span>
           <input type="checkbox" className="switch" id="suggest-on" checked={S.suggestOn} onChange={(e) => {
             S.suggestOn = e.target.checked;
             emit();
@@ -271,10 +270,63 @@ export function SettingsPage({ nav }: { nav: Nav }) {
           }} />
         </label>
       </div>
+      <ByokSection nav={nav} />
       <a className="supported-by" href="https://iosoftware.ai" target="_blank" rel="noopener noreferrer">
         <img src="icons/supported-by-iosoftware.svg" alt="Supported by io Software" />
       </a>
     </Page>
+  );
+}
+
+export const openUpgrade = () => chrome.tabs.create({ url: S.me?.upgrade_url ?? `${BACKEND}/upgrade` });
+
+function AccountSection() {
+  // byok：用自己的 Key，不扣點數；這個模式下完全不碰我們的後端，所以沒有方案與點數可以顯示
+  if (S.mode === "byok") {
+    return (
+      <section className="account" id="account" aria-labelledby="account-title">
+        <h2 className="group-title" id="account-title">{t("account.title")}</h2>
+        <div className="list-group">
+          <div className="list-row account-row">
+            <span className="row-text" id="account-byok">{t("account.byokNote")}</span>
+            <button type="button" className="btn btn-ghost" id="account-use-cloud" onClick={() => setMode("cloud")}>{t("account.useCloud")}</button>
+          </div>
+        </div>
+      </section>
+    );
+  }
+  const me = S.me;
+  const left = me ? Math.max(0, me.credits_limit - me.credits_used) : 0;
+  return (
+    <section className="account" id="account" aria-labelledby="account-title">
+      <h2 className="group-title" id="account-title">{t("account.title")}</h2>
+      <div className="list-group">
+        <div className="list-row account-row">
+          <span className="row-text">
+            <span id="account-plan"><strong>{me ? t(`plan.${me.plan}` as Key) : "…"}</strong></span>
+            <small>{t("account.anon")}</small>
+          </span>
+          <button type="button" className="btn btn-primary" id="account-upgrade" onClick={openUpgrade}>{t("account.upgrade")}</button>
+        </div>
+        {me ? (
+          <div className="list-row account-credits">
+            <span className="row-text">
+              {t("account.credits")}
+              <small id="account-credits">{t("account.creditsUsed", { used: me.credits_used, limit: me.credits_limit })}</small>
+              <progress className="meter" id="account-meter" max={me.credits_limit || 1} value={Math.min(me.credits_used, me.credits_limit)} aria-label={t("account.credits")} data-low={left === 0 ? "" : undefined} />
+              <small id="account-period">{t("account.periodEnd", { date: new Date(`${me.period_end}T00:00:00`).toLocaleDateString(currentLang(), { year: "numeric", month: "short", day: "numeric" }) })}</small>
+            </span>
+          </div>
+        ) : (
+          <div className="list-row"><span className="row-text"><small id="account-status">{S.meError ? t("account.loadFailed") : "…"}</small></span></div>
+        )}
+        {me?.kol_code && (
+          <div className="list-row">
+            <span className="row-text">{t("account.referral")}<small id="account-kol">{me.kol_code}</small></span>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -298,10 +350,10 @@ function loadModels(p: ProviderId) {
   );
 }
 
-// 目前供應商的模型選單：Anthropic 固定三個；其他動態列出，也能直接輸入模型名稱
-export function ModelSelect({ id, variant }: { id: string; variant: "bar" | "field" }) {
-  const p = S.provider;
-  const value = currentModel();
+// 模型選單：Anthropic 固定三個；其他動態列出，也能直接輸入模型名稱。p：輸入框下方的選單傳 activeProvider()（cloud 固定是 Anthropic），
+// 設定頁進階區塊傳使用者選的供應商
+export function ModelSelect({ id, variant, p }: { id: string; variant: "bar" | "field"; p: ProviderId }) {
+  const value = currentModel(p);
   const set = (v: string) => { conf(p).model = v; emit(); persistProviders(); };
   if (p === "anthropic") {
     return <Select id={id} variant={variant} label={t("composer.model")} value={value} onChange={set}
@@ -362,7 +414,7 @@ function ProviderFields({ p, nav }: { p: ProviderId; nav: Nav }) {
       </div>
       <div className="row">
         <label className="field-label" htmlFor="settings-model">{t("settings.model")}</label>
-        <ModelSelect id="settings-model" variant="field" />
+        <ModelSelect id="settings-model" variant="field" p={p} />
       </div>
       <div className="hint" id="provider">
         {custom ? <>{t("settings.providerCustom")} {t("settings.localHint")}</> : t("settings.providerDirect", { name: info.name })}
@@ -377,7 +429,8 @@ function ProviderFields({ p, nav }: { p: ProviderId; nav: Nav }) {
             latest.current = { key: "", base: "" };
             await persistProviders();
             if (p === "anthropic") await chrome.storage.local.remove("key"); // 舊版欄位，不移掉下次會被當成金鑰讀回來
-            if (!ready()) { nav.closeAll(); showView(); }
+            // byok 把自己的 Key 拿掉＝沒有東西可以用了：回首次設定頁（可以重新填，或改用 Cloud）；cloud 模式只是清掉欄位
+            if (S.mode === "byok" && !ready()) { nav.closeAll(); showView(); }
             else { setKey(""); setBase(""); }
           }}>{t("settings.logout")}</button>
         </div>
@@ -386,17 +439,32 @@ function ProviderFields({ p, nav }: { p: ProviderId; nav: Nav }) {
   );
 }
 
-export function ProviderPage({ nav }: { nav: Nav }) {
+// 「使用自己的 API Key（進階）」：預設收合。裡面是供應商與金鑰設定，加一個切換模式的開關（cloud ⇄ byok）
+export function ByokSection({ nav }: { nav: Nav }) {
+  const model = currentModel();
+  const name = providerName(S.provider) + (model ? ` · ${ANTHROPIC_MODELS.find((m) => m.value === model)?.label ?? model}` : "");
+  const byok = S.mode === "byok";
+  const canUse = byok || ready(); // 還沒填好供應商設定就不能打開
   return (
-    <Page id="provider-page" title={t("settings.provider")} onBack={nav.pop}>
-      <div className="row">
-        <label className="field-label" htmlFor="provider-select">{t("onboard.provider")}</label>
-        <Select id="provider-select" variant="field" label={t("onboard.provider")} value={S.provider}
-          options={PROVIDER_IDS.map((id) => ({ value: id, label: providerName(id) }))}
-          onChange={(v) => { S.provider = v as ProviderId; emit(); persistProviders(); scheduleSuggestions(); }} />
+    <details className="advanced" id="byok-details">
+      <summary className="list-row nav-row" id="byok-summary">
+        <span className="row-text">{t("byok.title")}<small id="byok-state">{byok ? t("byok.on", { name }) : t("byok.off")}</small></span>
+        <IconChevron />
+      </summary>
+      <div className="advanced-body">
+        <label className="list-row byok-toggle">
+          <span className="row-text">{t("byok.use")}<small>{canUse ? t("byok.useHint") : t("byok.needKey")}</small></span>
+          <input type="checkbox" className="switch" id="byok-on" checked={byok} disabled={!canUse} onChange={(e) => setMode(e.target.checked ? "byok" : "cloud")} />
+        </label>
+        <div className="row">
+          <label className="field-label" htmlFor="provider-select">{t("onboard.provider")}</label>
+          <Select id="provider-select" variant="field" label={t("onboard.provider")} value={S.provider}
+            options={PROVIDER_IDS.map((id) => ({ value: id, label: providerName(id) }))}
+            onChange={(v) => { S.provider = v as ProviderId; emit(); persistProviders(); scheduleSuggestions(); }} />
+        </div>
+        <ProviderFields key={S.provider} p={S.provider} nav={nav} />
       </div>
-      <ProviderFields key={S.provider} p={S.provider} nav={nav} />
-    </Page>
+    </details>
   );
 }
 
