@@ -4,6 +4,7 @@ import { systemPrompt, tools, MEMORY_TOOLS, CARD_TOOLS, newTask } from "./shared
 import { memoryPrompt } from "./memory";
 import { skillsPrompt, expandSlash, slashSkill, skillModel, type Skill } from "./skills";
 import { HAIKU, migrateModel } from "./models";
+import { usdOf, fmtUsd } from "./pricing";
 import { PROVIDERS, ANTHROPIC_MODELS, ProviderError, activeProvider, conf, currentModel, isHaiku, ready, streamChat, type ProviderId, type Turn } from "./providers";
 import { detectMode, type Mode } from "./mode";
 import { PAGE_TOOLS, ACTION_TOOLS, type Usage, charsOf, baHeaders, isQuota } from "./usage";
@@ -59,7 +60,7 @@ let controller: AbortController | null = null; // 按「停止」時中止整個
 // 一次任務最多幾輪工具呼叫：模型卡在同一個按鈕反覆點時會一直花錢
 const MAX_STEPS = 30; // ponytail: 固定值，有人需要再搬進設定頁
 
-type Stats = { steps: number; calls: number; input: number; cached: number; output: number };
+type Stats = { steps: number; calls: number; input: number; cached: number; output: number; usd?: number }; // usd：byok 的 Anthropic 才有（估計）
 
 // 串流中的一個思考／文字區塊
 function streamBlock(type: string) {
@@ -116,9 +117,10 @@ async function anthropicTurn(p: TurnParams): Promise<Turn> {
   try {
     const msg = await stream.finalMessage();
     const u = msg.usage;
+    const usd = usdOf(p.model, { input: u.input_tokens, cacheRead: u.cache_read_input_tokens ?? 0, cacheWrite: u.cache_creation_input_tokens ?? 0, output: u.output_tokens });
     return {
       content: msg.content as Block[], stop_reason: msg.stop_reason ?? "end_turn",
-      usage: { input: u.input_tokens + (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0), cached: u.cache_read_input_tokens ?? 0, output: u.output_tokens },
+      usage: { input: u.input_tokens + (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0), cached: u.cache_read_input_tokens ?? 0, output: u.output_tokens, ...(usd != null ? { usd } : {}) },
     };
   } finally {
     (block as ReturnType<typeof streamBlock>)?.finish();
@@ -182,6 +184,7 @@ async function runApi(userText: string, typed: string | null, stats: Stats, sign
     stats.input += msg.usage.input;
     stats.cached += msg.usage.cached;
     stats.output += msg.usage.output;
+    if (msg.usage.usd != null) stats.usd = (stats.usd ?? 0) + msg.usage.usd;
 
     if (msg.stop_reason === "refusal") throw new Error(t("error.refusal"));
     S.messages.push({ role: "assistant", content: msg.content });
@@ -233,6 +236,7 @@ async function addStats(stats: Stats, cloud: boolean) {
       t("stats.input", { n: kTok(stats.input) }) + (stats.cached ? t("stats.cached", { n: kTok(stats.cached) }) : ""),
       t("stats.output", { n: kTok(stats.output) }),
     );
+    if (stats.usd != null) parts.push(`≈ ${fmtUsd(stats.usd)}`); // byok 的 Anthropic：照官方價估計的美元（cloud 顯示點數，不顯示美元）
     addItem({ kind: "stats", text: parts.join(" · "), title: t("stats.hint") });
     return;
   }

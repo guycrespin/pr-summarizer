@@ -132,7 +132,8 @@ export function messagesToOpenAI(system: string, messages: Message[]) {
 
 // ---------- 串流 ----------
 
-export type Turn = { content: Block[]; stop_reason: string; usage: { input: number; cached: number; output: number } };
+// usd：這次呼叫的美元估計（pricing.ts），只有 Anthropic 直連（byok）算得出來
+export type Turn = { content: Block[]; stop_reason: string; usage: { input: number; cached: number; output: number; usd?: number } };
 type Sink = { text: (d: string) => void; thinking: (d: string) => void };
 
 const STOP: Record<string, string> = { stop: "end_turn", length: "max_tokens", tool_calls: "tool_use", function_call: "tool_use", content_filter: "refusal" };

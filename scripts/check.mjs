@@ -64,6 +64,34 @@ import { ANTHROPIC_MODELS, DEFAULT_MODEL, isHaiku, migrateModel, HAIKU } from ".
 }
 console.log("models: all checks passed");
 
+// ---------- byok 的美元估計（官方價，2026-10-08）----------
+import { usdOf, fmtUsd, TIER_TOKENS } from "../src/pricing";
+{
+  const close = (a, b, msg) => assert.ok(Math.abs(a - b) < 1e-12, `${msg ?? ""} ${a} vs ${b}`);
+  // 每百萬 token 的價格：用 100,000 token（Haiku 的低價段上限）乘 10 換算，免得 Haiku 掉進高價段
+  const one = (model, field) => usdOf(model, { input: 0, cacheRead: 0, cacheWrite: 0, output: 0, [field]: 100_000 }) * 10;
+  // input／output／cache 讀／cache 寫（5 分鐘）
+  for (const [model, [i, o, r, w]] of Object.entries({ "claude-sonnet-5-5": [2, 10, 0.1, 2.5], "claude-opus-5-5": [4, 20, 0.2, 5], "claude-haiku-5-5": [0.1, 0.5, 0.01, 0.125] })) {
+    close(one(model, "input"), i, `${model} input`); close(one(model, "output"), o, `${model} output`);
+    close(one(model, "cacheRead"), r, `${model} cache read`); close(one(model, "cacheWrite"), w, `${model} cache write`);
+  }
+  // Haiku 5.5：單次 prompt（含快取讀寫）超過 100,000 token 改用高價那段；剛好 100,000 還是低價
+  assert.equal(TIER_TOKENS, 100_000);
+  close(usdOf("claude-haiku-5-5", { input: 100_000, cacheRead: 0, cacheWrite: 0, output: 0 }), 100_000 * 0.1 / 1e6, "剛好 100,000：低價");
+  close(usdOf("claude-haiku-5-5", { input: 100_001, cacheRead: 0, cacheWrite: 0, output: 0 }), 100_001 * 0.5 / 1e6, "100,001：高價");
+  close(usdOf("claude-haiku-5-5", { input: 1000, cacheRead: 100_000, cacheWrite: 0, output: 1000 }), (1000 * 0.5 + 100_000 * 0.05 + 1000 * 2.5) / 1e6, "快取讀取也算進 prompt 長度");
+  close(usdOf("claude-haiku-5-5", { input: 0, cacheRead: 0, cacheWrite: 100_001, output: 1_000_000 }), (100_001 * 0.625 + 1_000_000 * 2.5) / 1e6, "快取寫入也算");
+  close(usdOf("claude-sonnet-5-5", { input: 500_000, cacheRead: 0, cacheWrite: 0, output: 0 }), 1, "Sonnet／Opus 不分段");
+  // 不在價格表的模型（舊 id、他家）不估計
+  for (const m of ["claude-sonnet-5", "claude-haiku-4-5", "gpt-5", ""]) assert.equal(usdOf(m, { input: 1, cacheRead: 0, cacheWrite: 0, output: 1 }), null, m);
+  close(usdOf("claude-haiku-5-5", { input: 10000, cacheRead: 40000, cacheWrite: 5000, output: 2000 }), 0.003025, "e2e 用的例子");
+  assert.equal(fmtUsd(0.003025), "$0.0030");
+  assert.equal(fmtUsd(6e-7), "<$0.0001");
+  assert.equal(fmtUsd(0.0123), "$0.01");
+  assert.equal(fmtUsd(1.239), "$1.24");
+}
+console.log("pricing: all checks passed");
+
 // ---------- OpenAI 相容格式轉換 ----------
 import { messagesToOpenAI, toolsToOpenAI, cleanBaseURL } from "../src/providers";
 {

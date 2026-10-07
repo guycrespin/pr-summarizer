@@ -138,9 +138,9 @@ const attacker = http.createServer((q, r) => { attackReqs.push(q.url); r.setHead
 await new Promise((r, j) => { attacker.once("listening", r); attacker.once("error", j); });
 const ATTACK = `http://127.0.0.1:${ATTACK_PORT}`;
 
-const sse = (blocks, stop) => {
+const sse = (blocks, stop, usage = { input_tokens: 1, output_tokens: 1 }) => {
   const ev = (type, data) => `event: ${type}\ndata: ${JSON.stringify({ type, ...data })}\n\n`;
-  let s = ev("message_start", { message: { id: "m", type: "message", role: "assistant", model: "claude-haiku-5-5", content: [], stop_reason: null, stop_sequence: null, usage: { input_tokens: 1, output_tokens: 1 } } });
+  let s = ev("message_start", { message: { id: "m", type: "message", role: "assistant", model: "claude-haiku-5-5", content: [], stop_reason: null, stop_sequence: null, usage } });
   blocks.forEach((b, index) => {
     if (b.type === "tool_use") {
       s += ev("content_block_start", { index, content_block: { type: "tool_use", id: b.id, name: b.name, input: {} } });
@@ -151,7 +151,7 @@ const sse = (blocks, stop) => {
     }
     s += ev("content_block_stop", { index });
   });
-  s += ev("message_delta", { delta: { stop_reason: stop, stop_sequence: null }, usage: { output_tokens: 1 } });
+  s += ev("message_delta", { delta: { stop_reason: stop, stop_sequence: null }, usage: { output_tokens: usage.output_tokens } });
   return s + ev("message_stop", {});
 };
 
@@ -200,7 +200,8 @@ try {
     const body = JSON.parse(rq.postData());
     byokReqs.push({ url: rq.url(), headers: rq.headers(), body });
     if (body.output_config?.format) return route.fulfill({ status: 200, headers: { "content-type": "application/json" }, body: suggestionJson([{ title: "a", subtitle: "a", prompt: "a" }, { title: "b", subtitle: "b", prompt: "b" }, { title: "c", subtitle: "c", prompt: "c" }]) });
-    await route.fulfill({ status: 200, headers: { "content-type": "text/event-stream" }, body: sse([{ type: "text", text: "byok 回覆" }], "end_turn") });
+    // 用量帶快取讀寫：驗用量列的美元估計（Haiku 5.5，prompt 55,000 token＜100,000，低價那段）
+    await route.fulfill({ status: 200, headers: { "content-type": "text/event-stream" }, body: sse([{ type: "text", text: "byok 回覆" }], "end_turn", { input_tokens: 10000, cache_read_input_tokens: 40000, cache_creation_input_tokens: 5000, output_tokens: 2000 }) });
   });
   let apiHits = 0; // 同意前不能打模型 API：見下面的醒目揭露同意測試
   const msgHeaders = []; // 每次 /v1/messages 帶的標頭（第一個任務結束後驗契約）
@@ -306,7 +307,8 @@ try {
     assert.equal(hasBA(r.headers), false, `byok 不帶任何 x-ba-* 標頭：${Object.keys(r.headers).join(",")}`);
   }
   assert.match(await panel.locator("#log .md").last().textContent(), /byok 回覆/);
-  assert.match(await panel.locator(".msg.stats").last().textContent(), /^輸入 1 · 輸出 1 token$/, "byok 的用量列維持原本的 token 顯示（不顯示點數）");
+  // byok 的用量列：原本的 token 顯示＋照官方價估計的美元（(10000×0.10 + 40000×0.01 + 5000×0.125 + 2000×0.50) ÷ 10⁶ ＝ $0.003025）；不顯示點數
+  assert.equal(await panel.locator(".msg.stats").last().textContent(), "輸入 55.0k（快取 40.0k） · 輸出 2.0k token · ≈ $0.0030");
   assert.equal(apiHits, 0, "byok 沒有任何 /v1/messages 打到後端");
   assert.equal(touches(), touches0, "byok 整個過程沒有任何請求打到後端位址（不註冊裝置、不打 /v1/me）");
   assert.deepEqual(await panel.evaluate(() => chrome.storage.local.get(["deviceToken", "userId"])), {}, "byok 沒有註冊裝置");
