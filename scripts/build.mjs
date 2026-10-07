@@ -22,9 +22,12 @@ const opts = {
   // 也對得上 manifest 的 minimum_chrome_version。
   bundle: true, splitting: true, format: "esm", target: "chrome122",
   outdir: ext, chunkNames: "chunks/[name]-[hash]",
-  define: { "process.env.NODE_ENV": '"production"' },
+  // 後端位址：build 時用環境變數 BA_BACKEND 覆寫（上架版指向正式後端），預設是本機開發用的 4410
+  define: { "process.env.NODE_ENV": '"production"', BA_BACKEND: JSON.stringify(process.env.BA_BACKEND ?? "http://localhost:4410") },
   logLevel: "warning",
   minify: !watch, // watch 模式不 minify，rebuild 快；上架用的 build／package 都會 minify
 };
-if (watch) await (await esbuild.context(opts)).watch();
-else await esbuild.build(opts);
+// 背景 service worker 另外打包（不切 chunk，manifest 不需要 type: module）：onInstalled 要註冊裝置、開歡迎頁
+const bg = { ...opts, entryPoints: [`${root}src/background.ts`], splitting: false, chunkNames: undefined };
+if (watch) for (const o of [opts, bg]) await (await esbuild.context(o)).watch();
+else { await esbuild.build(opts); await esbuild.build(bg); }

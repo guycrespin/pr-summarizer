@@ -8,3 +8,4 @@ extension/pdfjs/
 .claude/
 .DS_Store
 dist/
+extension/background.js
