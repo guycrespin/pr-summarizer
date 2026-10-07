@@ -18,6 +18,7 @@ import { S } from "./store";
 import type { Block, Message } from "./history";
 import { t, type Key } from "./i18n";
 import { ANTHROPIC_MODELS, DEFAULT_MODEL, isHaiku } from "./models";
+import { cloudReadLevels } from "./cloud-models";
 export { ANTHROPIC_MODELS, isHaiku }; // 模型清單與 Haiku 判斷搬到 models.ts（純函式）；這裡轉出，其他檔案照舊從 providers import
 
 export type ProviderId = "anthropic" | "openai" | "gemini" | "openrouter" | "custom";
@@ -38,6 +39,9 @@ export const conf = (id: ProviderId = S.provider) => (S.providers[id] ??= {});
 
 // 現在實際用的供應商：cloud 模式固定是 Anthropic（走自家後端），byok 才看使用者選的
 export const activeProvider = (): ProviderId => (S.mode === "cloud" ? "anthropic" : S.provider);
+
+// 現在實際生效的讀頁字數上限：cloud 照 /v1/me 的檔位（存的不在清單裡就用預設、還沒拿到就 8000），byok 照使用者設的 S.pageChars
+export const readChars = () => (S.mode === "cloud" ? cloudReadLevels(S.me, S.pageChars).chars : S.pageChars);
 
 // 只接受 http(s)，去掉結尾的 /；不合格回 null
 export function cleanBaseURL(s: string | undefined): string | null {

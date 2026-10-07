@@ -114,7 +114,8 @@ export const CARD_TOOLS = ["ask_user", "create_file"];
 // 一次任務（使用者送出一則訊息到模型做完）的安全狀態。
 // origins：不用問就能 navigate 的來源（開始時分頁的 origin＋使用者這則訊息裡自己打的網址／網域＋這次允許過的）。
 // tainted：這次任務的內容裡已經有網頁來的不可信文字（讀過頁面、PDF、附了選取內容、前往過別的頁面），之後寫入記憶要先問
-export type Task = { origins: Set<string>; tainted: boolean };
+// readChars：這次任務讀頁字數的上限，cloud 在任務開始時釘住（伺服器也只在這時照它計點，中途改檔位不會多讀）；byok 沒給＝即時讀 S.pageChars
+export type Task = { origins: Set<string>; tainted: boolean; readChars?: number };
 
 // 使用者打的字裡出現的網址與網域。網域沒寫協定就 http、https 都算
 export function userOrigins(text: string): string[] {
@@ -126,10 +127,10 @@ export function userOrigins(text: string): string[] {
   return [...out];
 }
 
-export function newTask(startUrl: string | undefined, userText: string, tainted: boolean): Task {
+export function newTask(startUrl: string | undefined, userText: string, tainted: boolean, readChars?: number): Task {
   const origins = new Set(userOrigins(userText));
   try { if (startUrl) origins.add(new URL(startUrl).origin); } catch { /* 內建頁 */ }
-  return { origins, tainted };
+  return { origins, tainted, readChars };
 }
 
 // 確認卡上的網址：完整顯示；太長就截斷，但一定留網域與查詢字串的開頭（資料通常藏在 query 裡）

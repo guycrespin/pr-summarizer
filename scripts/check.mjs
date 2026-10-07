@@ -124,8 +124,9 @@ console.log("providers: all checks passed");
 // ---------- 後端記帳標頭 ----------
 import { baHeaders, charsOf, isQuota, isModelNotInPlan, PAGE_TOOLS, ACTION_TOOLS } from "../src/usage";
 {
-  assert.deepEqual(baHeaders("task", "sid", { pages: 3, actions: 12, chars: 40211 }), { "x-ba-session": "sid", "x-ba-kind": "task", "x-ba-stats": "pages=3;actions=12;chars=40211" });
-  assert.equal(baHeaders("aux", "s", { pages: 0, actions: 0, chars: 0 })["x-ba-kind"], "aux");
+  assert.deepEqual(baHeaders("task", "sid", { pages: 3, actions: 12, chars: 40211 }, 15000), { "x-ba-session": "sid", "x-ba-kind": "task", "x-ba-stats": "pages=3;actions=12;chars=40211", "x-ba-read-chars": "15000" });
+  assert.equal(baHeaders("aux", "s", { pages: 0, actions: 0, chars: 0 }, 8000)["x-ba-kind"], "aux");
+  assert.equal(baHeaders("aux", "s", { pages: 0, actions: 0, chars: 0 }, 8000)["x-ba-read-chars"], "8000", "aux 也帶（伺服器不會用）");
   assert.equal(charsOf("字".repeat(5)), 5);
   assert.equal(charsOf([{ type: "text", text: "abc" }, { type: "document" }, { type: "text", text: "de" }]), 5);
   assert.equal(charsOf(undefined), 0);
@@ -194,6 +195,57 @@ import { cloudModels } from "../src/cloud-models";
   ]);
 }
 console.log("cloud-models: all checks passed");
+
+// ---------- cloud 的讀頁字數檔位：照 /v1/me 的 read_levels／default_read_chars ----------
+import { cloudReadLevels } from "../src/cloud-models";
+import { readChars } from "../src/providers";
+import { S } from "../src/store";
+{
+  const levels = [{ chars: 8000, credits: 0 }, { chars: 15000, credits: 1 }, { chars: 30000, credits: 2 }];
+  const me = { read_levels: levels, default_read_chars: 8000 };
+  const only8000 = { levels: [{ chars: 8000, credits: 0 }], chars: 8000 };
+
+  // 還沒拿到 /v1/me（第一次啟動、離線）、或舊版後端沒給檔位：只有 8000 一檔（選單不能亂選，伺服器會拒絕不在清單裡的字數）
+  assert.deepEqual(cloudReadLevels(null), only8000);
+  assert.deepEqual(cloudReadLevels(null, 15000), only8000, "沒有清單時存過的值不算數");
+  for (const x of [{}, { read_levels: [] }, { read_levels: null }, { read_levels: "x" }, { default_read_chars: 15000 }]) assert.deepEqual(cloudReadLevels(x, 15000), only8000, JSON.stringify(x));
+  assert.deepEqual(cloudReadLevels({ read_levels: [{ chars: 0, credits: 1 }, { chars: -5, credits: 1 }, { chars: "x", credits: 1 }, null] }), only8000, "沒有一檔合格＝當作沒有清單");
+
+  // 有清單：只用清單，點數照後端；沒存過、存過的在清單裡、不在清單裡
+  assert.deepEqual(cloudReadLevels(me).levels, levels);
+  assert.equal(cloudReadLevels(me).chars, 8000, "沒存過：default_read_chars");
+  assert.equal(cloudReadLevels(me, 15000).chars, 15000, "存過的在清單裡：用它");
+  assert.equal(cloudReadLevels(me, 30000).chars, 30000);
+  assert.equal(cloudReadLevels(me, 3000).chars, 8000, "存過的不在清單裡（例如 byok 設過的 3000）：default_read_chars");
+  assert.equal(cloudReadLevels({ read_levels: levels, default_read_chars: 15000 }, 5000).chars, 15000, "預設不是第一檔也照後端");
+  assert.equal(cloudReadLevels({ read_levels: levels, default_read_chars: 15000 }).levels.length, 3, "清單不補內建的五個選項");
+
+  // 後端的 default_read_chars 不照契約（沒給、不在清單裡）：退到最小的一檔，不會回傳清單以外的字數
+  for (const d of [undefined, 12345]) assert.equal(cloudReadLevels({ read_levels: levels, default_read_chars: d }, 3000).chars, 8000, `default=${d}`);
+  assert.equal(cloudReadLevels({ read_levels: [{ chars: 15000, credits: 1 }, { chars: 30000, credits: 2 }], default_read_chars: 8000 }, 3000).chars, 15000, "最小的一檔");
+
+  // 欄位不照契約也不報錯：credits 沒給、不是數字、負數都當 0
+  assert.deepEqual(cloudReadLevels({ read_levels: [{ chars: 8000 }, { chars: 15000, credits: "2" }, { chars: 30000, credits: -1 }], default_read_chars: 8000 }).levels,
+    [{ chars: 8000, credits: 0 }, { chars: 15000, credits: 0 }, { chars: 30000, credits: 0 }]);
+
+  // readChars()：cloud 照上面的規則（驗證過），byok 照使用者設的 S.pageChars，不看 /v1/me
+  const keep = { mode: S.mode, me: S.me, pageChars: S.pageChars };
+  S.pageChars = 3000;
+  S.mode = "byok"; S.me = null;
+  assert.equal(readChars(), 3000, "byok：照使用者設的");
+  S.me = me;
+  assert.equal(readChars(), 3000, "byok：記憶體裡留著 cloud 的檔位也不影響");
+  S.pageChars = 12345;
+  assert.equal(readChars(), 12345, "byok：不驗證");
+  S.mode = "cloud"; S.me = null; S.pageChars = 15000;
+  assert.equal(readChars(), 8000, "cloud 還沒拿到 /v1/me：8000，不送沒驗證過的字數");
+  S.me = me;
+  assert.equal(readChars(), 15000, "cloud 拿到清單：存過的在清單裡");
+  S.pageChars = 3000;
+  assert.equal(readChars(), 8000, "cloud：存過的不在清單裡");
+  Object.assign(S, keep);
+}
+console.log("cloud-read-levels: all checks passed");
 
 // ---------- 模式：全新安裝 cloud；升級前設定過金鑰或自訂位址的舊使用者維持 byok ----------
 import { detectMode } from "../src/mode";
@@ -371,6 +423,8 @@ import { userOrigins, newTask, displayUrl } from "../src/shared";
     ["http://127.0.0.1:9393", "http://b.org", "https://a.example.com", "https://b.org"]);
   const task = newTask("https://start.example/page", "看看 docs.example", false);
   assert.ok(task.origins.has("https://start.example") && task.origins.has("https://docs.example") && !task.origins.has("https://evil.example"));
+  assert.equal(task.readChars, undefined, "byok：沒釘字數，讀頁照舊即時讀 S.pageChars");
+  assert.equal(newTask("https://start.example/", "", false, 15000).readChars, 15000, "cloud：任務開始時釘住的字數");
   assert.equal(displayUrl("https://e.example/?q=secret"), "https://e.example/?q=secret");
   const long = displayUrl(`https://evil.example/${"p".repeat(300)}?q=secret${"x".repeat(400)}`);
   assert.ok(long.startsWith("https://evil.example/") && long.includes("?q=secret") && long.length < 260, long);

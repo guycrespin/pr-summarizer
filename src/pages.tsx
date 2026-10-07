@@ -10,7 +10,7 @@ import { IconBack, IconChevron, IconErr, IconMore, IconSearch } from "./icons";
 import { Select, type Opt } from "./select";
 import { ANTHROPIC_MODELS, PROVIDERS, PROVIDER_IDS, activeProvider, providerName, cleanBaseURL, baseURL, conf, currentModel, listModels, ready, type ProviderId } from "./providers";
 import { BACKEND } from "./backend";
-import { cloudModels } from "./cloud-models";
+import { cloudModels, cloudReadLevels } from "./cloud-models";
 
 export type Route =
   | { name: "history" }
@@ -228,6 +228,18 @@ function NavRow({ id, title, value, onClick }: { id: string; title: string; valu
 
 export function SettingsPage({ nav }: { nav: Nav }) {
   useEffect(() => { refreshMe(); }, []); // 每次打開設定都重抓：升級或換月後點數會變
+  // 讀頁字數上限：cloud 只列後端 /v1/me 的檔位（每檔顯示字數，加點大於 0 才標「＋M 點／任務」）；byok 照舊是 PAGE_CHARS 的五個選項、不扣點
+  const cloud = S.mode === "cloud";
+  const read = cloudReadLevels(S.me, S.pageChars);
+  const pageCharsOptions: Opt[] = cloud
+    ? read.levels.map((l) => ({
+      value: String(l.chars), label: t("settings.readChars", { n: l.chars.toLocaleString(currentLang()) }),
+      hint: l.credits > 0 ? t(l.credits === 1 ? "settings.readExtra" : "settings.readExtras", { n: l.credits }) : undefined,
+    }))
+    : PAGE_CHARS.map(([n, k]) => {
+      const num = n.toLocaleString(currentLang());
+      return { value: String(n), label: k ? t(k, { n: num }) : num };
+    });
   return (
     <Page id="settings" title={t("settings.title")} onBack={nav.pop}>
       <AccountSection />
@@ -250,11 +262,8 @@ export function SettingsPage({ nav }: { nav: Nav }) {
         </div>
         <div className="list-row">
           <label className="row-text" htmlFor="page-chars">{t("settings.pageChars")}<small>{t("settings.pageCharsHint")}</small></label>
-          <Select id="page-chars" variant="compact" label={t("settings.pageChars")} value={String(S.pageChars)}
-            options={PAGE_CHARS.map(([n, k]) => {
-              const num = n.toLocaleString(currentLang());
-              return { value: String(n), label: k ? t(k, { n: num }) : num };
-            })}
+          <Select id="page-chars" variant="compact" label={t("settings.pageChars")} value={String(cloud ? read.chars : S.pageChars)}
+            options={pageCharsOptions}
             onChange={(v) => {
               S.pageChars = Number(v);
               emit();

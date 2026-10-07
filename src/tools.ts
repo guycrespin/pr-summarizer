@@ -101,9 +101,9 @@ async function guard(tabId: number, input: Input, submitting: boolean, url: stri
 
 const hostOf = (url = "") => { try { return new URL(url).hostname; } catch { return url; } };
 
-// 長內容分段回傳：一次最多 S.pageChars 字，後面還有就附註 offset
-function slice(body: string, offset: number) {
-  const part = body.slice(offset, offset + S.pageChars);
+// 長內容分段回傳：一次最多 limit 字（沒給＝即時讀 S.pageChars；cloud 任務開始時釘住的在 task.readChars），後面還有就附註 offset
+function slice(body: string, offset: number, limit = S.pageChars) {
+  const part = body.slice(offset, offset + limit);
   const end = offset + part.length;
   const note = end < body.length
     ? `\n\n[第 ${offset}–${end} 字，全文 ${body.length} 字。一般摘要讀到這裡就夠；確實需要後面的內容才用 offset=${end} 繼續讀。]`
@@ -132,9 +132,9 @@ function userError(text: string, forModel: string): never {
   throw new Error(forModel);
 }
 
-async function readPdf(url: string, title: string, offset: number, signal?: AbortSignal): Promise<string | Block[]> {
+async function readPdf(url: string, title: string, offset: number, signal?: AbortSignal, limit?: number): Promise<string | Block[]> {
   const head = `標題：${title}\n網址：${url}\n（這是 PDF，已抽出文字；每頁以 [第 N 頁] 標記開頭）\n\n`;
-  if (pdfCache?.url === url) return head + slice(pdfCache.text, offset);
+  if (pdfCache?.url === url) return head + slice(pdfCache.text, offset, limit);
   let data: ArrayBuffer;
   try {
     data = await fetchPdf(url);
@@ -147,7 +147,7 @@ async function readPdf(url: string, title: string, offset: number, signal?: Abor
     const text = await pdfText(doc);
     if (!isScanned(text, doc.numPages)) {
       pdfCache = { url, text };
-      return head + slice(text, offset);
+      return head + slice(text, offset, limit);
     }
     // 掃描檔：沒有文字層，只有 Anthropic 能直接吃 PDF（每頁當圖片看，比較貴）；cloud 模式固定走 Anthropic
     if (activeProvider() !== "anthropic") userError(t("pdf.scanUnsupported"), "這是掃描檔（沒有文字層），目前的模型讀不了。已經告訴使用者了，不要再重試");
@@ -231,7 +231,7 @@ export async function runTool(name: string, input: Input, tabId: number, task: T
     case "read_page": {
       task.tainted = true;
       const pdf = await pdfSource(tab);
-      if (pdf) return readPdf(pdf, tab.title ?? "", Math.max(0, Math.floor(input.offset ?? 0)), signal);
+      if (pdf) return readPdf(pdf, tab.title ?? "", Math.max(0, Math.floor(input.offset ?? 0)), signal, task.readChars);
       if (input.elements) return `標題：${tab.title}\n網址：${tab.url}\n\n${await inPage(tab.id!, listElements, [ELEMENT_LIMIT])}`;
       const body = await inPage(tab.id!, (sel: string | null, html: boolean) => {
         if (sel || html) {
@@ -254,7 +254,7 @@ export async function runTool(name: string, input: Input, tabId: number, task: T
         return text.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
       }, [input.selector ?? null, !!input.html]);
       if (body == null) throw new Error(`找不到元素：${input.selector}`);
-      return `標題：${tab.title}\n網址：${tab.url}\n\n${slice(body, Math.max(0, Math.floor(input.offset ?? 0)))}`;
+      return `標題：${tab.title}\n網址：${tab.url}\n\n${slice(body, Math.max(0, Math.floor(input.offset ?? 0)), task.readChars)}`;
     }
     case "navigate": {
       if (!/^https?:\/\//i.test(input.url)) throw new Error("只接受 http(s) 網址");
