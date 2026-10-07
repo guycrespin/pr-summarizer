@@ -17,6 +17,8 @@ import type { BetaTool } from "@anthropic-ai/sdk/resources/beta/messages/message
 import { S } from "./store";
 import type { Block, Message } from "./history";
 import { t, type Key } from "./i18n";
+import { ANTHROPIC_MODELS, DEFAULT_MODEL, isHaiku } from "./models";
+export { ANTHROPIC_MODELS, isHaiku }; // 模型清單與 Haiku 判斷搬到 models.ts（純函式）；這裡轉出，其他檔案照舊從 providers import
 
 export type ProviderId = "anthropic" | "openai" | "gemini" | "openrouter" | "custom";
 export type ProviderConf = { key?: string; baseURL?: string; model?: string };
@@ -31,15 +33,6 @@ export const PROVIDERS: Record<ProviderId, { name: string; baseURL: string; keyU
 };
 export const PROVIDER_IDS = Object.keys(PROVIDERS) as ProviderId[];
 export const providerName = (id: ProviderId) => (id === "custom" ? t("provider.custom") : PROVIDERS[id].name);
-
-export const ANTHROPIC_MODELS = [
-  { value: "claude-sonnet-5", label: "Sonnet 5", hint: "model.hint.sonnet" },
-  { value: "claude-opus-5", label: "Opus 5", hint: "model.hint.opus" },
-  { value: "claude-haiku-4-5", label: "Haiku 4.5", hint: "model.hint.haiku" },
-] as const satisfies readonly { value: string; label: string; hint: Key }[];
-
-// Haiku 4.5 不支援 effort 與自適應思考
-export const isHaiku = (model: string) => model.startsWith("claude-haiku");
 
 export const conf = (id: ProviderId = S.provider) => (S.providers[id] ??= {});
 
@@ -57,7 +50,7 @@ export const baseURL = (id: ProviderId = S.provider) => (id === "custom" ? clean
 
 export function currentModel(id: ProviderId = S.provider) {
   const m = conf(id).model ?? "";
-  if (id === "anthropic") return ANTHROPIC_MODELS.some((x) => x.value === m) ? m : "claude-sonnet-5";
+  if (id === "anthropic") return ANTHROPIC_MODELS.some((x) => x.value === m) ? m : DEFAULT_MODEL;
   return m;
 }
 

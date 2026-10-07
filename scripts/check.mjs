@@ -35,15 +35,34 @@ assert.deepEqual(parseSkill(serializeSkill(h)), h);
 assert.ok(!serializeSkill(a).includes("model:"));
 assert.ok(!("model" in a));
 assert.equal(parseSkill('---\nname: x\nmodel: "claude-haiku-4-5"\n---\nb').model, "claude-haiku-4-5");
-assert.equal(skillModel("haiku"), "claude-haiku-4-5");
-assert.equal(skillModel(" Opus "), "claude-opus-5");
-assert.equal(skillModel("claude-sonnet-5"), "claude-sonnet-5");
+assert.equal(skillModel("haiku"), "claude-haiku-5-5");
+assert.equal(skillModel(" Opus "), "claude-opus-5-5");
+assert.equal(skillModel("sonnet"), "claude-sonnet-5-5");
+assert.equal(skillModel("claude-sonnet-5-5"), "claude-sonnet-5-5");
+// 技能裡寫的舊 id 照 5.5 解讀
+assert.equal(skillModel("claude-sonnet-5"), "claude-sonnet-5-5");
+assert.equal(skillModel("claude-opus-5"), "claude-opus-5-5");
+assert.equal(skillModel("claude-haiku-4-5"), "claude-haiku-5-5");
 for (const x of [undefined, "", "inherit", "gpt-5", "claude-3-opus"]) assert.equal(skillModel(x), null, String(x));
 assert.equal(slashSkill("/tldr 補充", [a, h]), h);
 assert.equal(slashSkill("tldr", [h]), null);
 assert.equal(slashSkill("/沒有", [h]), null);
 
 console.log("skills: all checks passed");
+
+// ---------- 模型：5.5 系列、舊 id 搬家 ----------
+import { ANTHROPIC_MODELS, DEFAULT_MODEL, isHaiku, migrateModel, HAIKU } from "../src/models";
+{
+  assert.deepEqual(ANTHROPIC_MODELS.map((m) => [m.value, m.label]), [["claude-sonnet-5-5", "Sonnet 5.5"], ["claude-opus-5-5", "Opus 5.5"], ["claude-haiku-5-5", "Haiku 5.5"]]);
+  assert.equal(DEFAULT_MODEL, "claude-sonnet-5-5");
+  assert.equal(HAIKU, "claude-haiku-5-5");
+  assert.equal(migrateModel("claude-sonnet-5"), "claude-sonnet-5-5");
+  assert.equal(migrateModel("claude-opus-5"), "claude-opus-5-5");
+  assert.equal(migrateModel("claude-haiku-4-5"), "claude-haiku-5-5");
+  for (const m of ["claude-sonnet-5-5", "claude-opus-5-5", "claude-haiku-5-5", "gpt-5", "anthropic/claude-sonnet-5", ""]) assert.equal(migrateModel(m), m, `${m} 不動`);
+  assert.deepEqual(ANTHROPIC_MODELS.filter((m) => isHaiku(m.value)).map((m) => m.value), ["claude-haiku-5-5"], "只有 Haiku 跳過 thinking／effort");
+}
+console.log("models: all checks passed");
 
 // ---------- OpenAI 相容格式轉換 ----------
 import { messagesToOpenAI, toolsToOpenAI, cleanBaseURL } from "../src/providers";

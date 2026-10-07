@@ -3,6 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { systemPrompt, tools, MEMORY_TOOLS, CARD_TOOLS, newTask } from "./shared";
 import { memoryPrompt } from "./memory";
 import { skillsPrompt, expandSlash, slashSkill, skillModel, type Skill } from "./skills";
+import { HAIKU, migrateModel } from "./models";
 import { PROVIDERS, ANTHROPIC_MODELS, ProviderError, activeProvider, conf, currentModel, isHaiku, ready, streamChat, type ProviderId, type Turn } from "./providers";
 import { detectMode, type Mode } from "./mode";
 import { PAGE_TOOLS, ACTION_TOOLS, type Usage, charsOf, baHeaders, isQuota } from "./usage";
@@ -88,7 +89,7 @@ async function anthropicTurn(p: TurnParams): Promise<Turn> {
     {
       model: p.model, max_tokens: 64000,
       system: p.system, tools: p.tools, messages: S.messages as any,
-      // Sonnet 5 / Opus 5：自適應思考＋effort；預設不回傳思考內容，summarized 才看得到摘要。Haiku 兩者都不支援
+      // Sonnet 5.5 / Opus 5.5：自適應思考＋effort；預設不回傳思考內容，summarized 才看得到摘要。Haiku 不開（5.5 其實支援，維持不開比較省）
       ...(isHaiku(p.model) ? {} : {
         thinking: { type: "adaptive", display: "summarized" },
         output_config: { effort: S.effort as any },
@@ -389,8 +390,8 @@ const SUGGEST_SCHEMA = {
 
 async function generateSuggestions(url: string, page: { title: string; text: string }, cloud: boolean): Promise<Suggestion[]> {
   const res = await (await makeClient(cloud)).messages.create({
-    // 固定用最便宜的 Haiku 4.5：每開一個新頁面都會跑一次，成本要壓到最低
-    model: "claude-haiku-4-5", max_tokens: 600,
+    // 固定用最便宜的 Haiku 5.5：每開一個新頁面都會跑一次，成本要壓到最低（自動呼叫的 max_tokens 一律 ≤ 1024）
+    model: HAIKU, max_tokens: 600,
     output_config: { format: { type: "json_schema", schema: SUGGEST_SCHEMA } },
     system: "你替瀏覽器側邊欄 agent 產生剛好三個「使用者在這個頁面最可能想請你做的事」，彼此不重複、要具體到這一頁。"
       + `title 6–10 字、subtitle 10–16 字、prompt 是送給 agent 的完整指令。三個欄位都用 ${langEnglishName()} 撰寫。`
@@ -503,6 +504,12 @@ export async function init() {
   // 舊版只有 key／model 兩個欄位＝Anthropic 的金鑰與模型，升級後不用重填
   S.providers = saved.providers ?? (saved.key ? { anthropic: { key: saved.key, ...(saved.model ? { model: saved.model } : {}) } } : {});
   if (saved.provider && saved.provider in PROVIDERS) S.provider = saved.provider;
+  // 升級：存過的舊 Anthropic 模型（Sonnet 5／Opus 5／Haiku 4.5）換成 5.5 系列，cloud 與 byok 都一樣
+  const am = S.providers.anthropic;
+  if (am?.model && migrateModel(am.model) !== am.model) {
+    am.model = migrateModel(am.model);
+    if (saved.providers) await persist({ providers: S.providers }); // 只有 key／model 兩個舊欄位的最舊版使用者不另外寫（舊欄位照舊保留，每次啟動重新換算）
+  }
   // 模式：全新安裝是 cloud；升級前已經設定過金鑰或自訂位址的舊使用者維持 byok（金鑰照舊留著，不扣點、不碰我們的後端）。見 mode.ts
   S.mode = detectMode(saved);
   if (saved.mode !== S.mode) await persist({ mode: S.mode });

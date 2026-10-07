@@ -1,5 +1,6 @@
 // 技能＝SKILL.md：開頭 --- 包住的 name / description，後面是給模型的完整指示。
 // 格式與 Claude Code 的 SKILL.md 相容，可以直接互相匯入匯出。選填的 model（例如 haiku）指定用 /名稱 叫出時用哪個模型。
+import { HAIKU, SONNET, OPUS, migrateModel } from "./models";
 
 export type Skill = { name: string; description: string; body: string; model?: string };
 
@@ -36,10 +37,10 @@ export const serializeSkill = (s: Skill) =>
   `---\nname: ${s.name}\ndescription: ${s.description.replace(/\n/g, " ")}\n${s.model ? `model: ${s.model}\n` : ""}---\n\n${s.body}\n`;
 
 // 技能的 model 欄位（Claude Code 寫法：haiku／sonnet／opus 或模型 id）→ 這裡支援的 Anthropic 模型 id；
-// 其他值（inherit、舊模型、他家模型）回 null＝用目前選的
-const MODEL_ALIASES: Record<string, string> = { haiku: "claude-haiku-4-5", sonnet: "claude-sonnet-5", opus: "claude-opus-5" };
+// 其他值（inherit、他家模型）回 null＝用目前選的
+const MODEL_ALIASES: Record<string, string> = { haiku: HAIKU, sonnet: SONNET, opus: OPUS };
 export function skillModel(model: string | undefined): string | null {
-  const m = (model ?? "").trim().toLowerCase();
+  const m = migrateModel((model ?? "").trim().toLowerCase()); // 舊 id（Sonnet 5／Opus 5／Haiku 4.5）照 5.5 解讀
   return MODEL_ALIASES[m] ?? (Object.values(MODEL_ALIASES).includes(m) ? m : null);
 }
 

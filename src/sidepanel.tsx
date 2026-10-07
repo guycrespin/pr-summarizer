@@ -215,7 +215,7 @@ function Composer() {
         />
         <div className="composer-bar">
           <ModelSelect id="model" variant="bar" p={activeProvider()} />
-          {/* effort 是 Anthropic 的參數（cloud 固定是 Anthropic）；Haiku 4.5 不支援 effort 與自適應思考 */}
+          {/* effort 是 Anthropic 的參數（cloud 固定是 Anthropic）；Haiku 不開 effort 與自適應思考 */}
           <Select id="effort" label={t("composer.effort")} title={t("composer.effortHint")} hidden={activeProvider() !== "anthropic" || isHaiku(currentModel(activeProvider()))} value={S.effort}
             options={(["low", "medium", "high", "xhigh", "max"] as const).map((v) => ({ value: v, label: t(`effort.${v}`), hint: t(`effort.hint.${v}`) }))}
             onChange={(v) => {
