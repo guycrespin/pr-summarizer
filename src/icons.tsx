@@ -27,6 +27,7 @@ export const IconCopy = () => (
   <Svg cap={false}><rect x="5.5" y="5.5" width="8" height="8" rx="1.5" /><path d="M10.5 5.5V4a1.5 1.5 0 00-1.5-1.5H4A1.5 1.5 0 002.5 4v5A1.5 1.5 0 004 10.5h1.5" /></Svg>
 );
 export const IconOk = () => <Svg sw={2} join><path d="M3.5 8.5l3 3 6-7" /></Svg>;
+export const IconLock = () => <Svg sw={1.4} join><rect x="3.5" y="7" width="9" height="6.5" rx="1.5" /><path d="M5.5 7V5.2a2.5 2.5 0 015 0V7" /></Svg>;
 export const IconErr = () => <Svg sw={2}><path d="M4.5 4.5l7 7M11.5 4.5l-7 7" /></Svg>;
 export const IconDownload = () => <Svg sw={1.5} join><path d="M8 2.5v8M4.5 7L8 10.5 11.5 7M3 13.5h10" /></Svg>;
 export const IconTrash = () => <Svg sw={1.5}><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5" /></Svg>;

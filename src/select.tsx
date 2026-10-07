@@ -3,10 +3,11 @@
 // 鍵盤：觸發鈕上 ↑↓／Enter／空白鍵打開；選單裡 ↑↓／Home／End 移動、Enter（或不在搜尋框時的空白鍵）選取、
 // Esc 關閉並把焦點還給觸發鈕、Tab 關閉；沒有搜尋框時打字跳到開頭相符的選項。點外面、捲動外面、視窗縮放都會關。
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
-import { IconOk } from "./icons";
+import { IconOk, IconLock } from "./icons";
 import { t } from "./i18n";
 
-export type Opt = { value: string; label: string; hint?: string };
+// locked：鎖住的原因（例如「需升級方案」）。有值＝畫鎖頭、不當成選中；選了之後 onChange 由呼叫端決定做什麼（例如開升級頁）
+export type Opt = { value: string; label: string; hint?: string; locked?: string };
 
 const SEARCH_MIN = 10; // 超過這麼多個選項才出現篩選框
 
@@ -130,10 +131,10 @@ export function Select({ id, value, options, onChange, label, variant = "bar", t
           <div className="sel-list" id={`${id}-list`} role="listbox" ref={list} tabIndex={-1} aria-label={label} aria-activedescendant={searchable ? undefined : activeId}>
             {items.map((o, i) => (
               <div key={`${o.custom ? "+" : ""}${o.value}`} id={`${id}-opt-${i}`} role="option" className="sel-opt" aria-selected={o.value === value && !o.custom}
-                data-active={i === active ? "" : undefined} data-value={o.value} title={o.label}
+                data-active={i === active ? "" : undefined} data-locked={o.locked ? "" : undefined} data-value={o.value} title={o.label}
                 onMouseDown={(e) => e.preventDefault()} onMouseMove={() => i !== active && setActive(i)} onClick={() => choose(o)}>
-                <span className="sel-text"><span className="sel-label">{o.label}</span>{o.hint && <small>{o.hint}</small>}</span>
-                {o.value === value && !o.custom && <IconOk />}
+                <span className="sel-text"><span className="sel-label">{o.label}</span>{o.hint && <small>{o.hint}</small>}{o.locked && <small className="sel-lock">{o.locked}</small>}</span>
+                {o.locked ? <IconLock /> : o.value === value && !o.custom && <IconOk />}
               </div>
             ))}
             {!items.length && <div className="sel-empty">{t("select.noMatch")}</div>}

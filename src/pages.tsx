@@ -10,6 +10,7 @@ import { IconBack, IconChevron, IconErr, IconMore, IconSearch } from "./icons";
 import { Select, type Opt } from "./select";
 import { ANTHROPIC_MODELS, PROVIDERS, PROVIDER_IDS, activeProvider, providerName, cleanBaseURL, baseURL, conf, currentModel, listModels, ready, type ProviderId } from "./providers";
 import { BACKEND } from "./backend";
+import { cloudModels } from "./cloud-models";
 
 export type Route =
   | { name: "history" }
@@ -365,6 +366,22 @@ export function ModelSelect({ id, variant, p }: { id: string; variant: "bar" | "
   return <Select id={id} variant={variant} label={t("composer.model")} value={value} onChange={set} options={options} allowCustom
     placeholder={t("model.choose")} onOpen={() => loadModels(p)}
     status={state.loading ? t("model.loading") : state.error ? t("model.loadFailed", { error: state.error }) : null} />;
+}
+
+// cloud 的模型選單：只列後端 /v1/me 給的模型（名稱、排序照後台）。說明＝tier 對應的既有字典＋「N 點／任務」（舊版後端沒有 credits 就不顯示）；
+// 鎖住的（方案不夠）顯示鎖頭和「需升級方案」，點了開升級頁、不能選
+export function CloudModelSelect({ id, variant }: { id: string; variant: "bar" | "field" }) {
+  const { items, model } = cloudModels(S.me, conf("anthropic").model);
+  const options: Opt[] = items.map((m) => ({
+    value: m.value, label: m.label,
+    hint: [m.hint && t(m.hint), m.credits != null && t(m.credits === 1 ? "model.credit" : "model.credits", { n: m.credits })].filter(Boolean).join(" · ") || undefined,
+    ...(m.locked ? { locked: t("model.locked") } : {}),
+  }));
+  const set = (v: string) => {
+    if (items.find((m) => m.value === v)?.locked) { openUpgrade(); return; }
+    conf("anthropic").model = v; emit(); persistProviders();
+  };
+  return <Select id={id} variant={variant} label={t("composer.model")} value={model} onChange={set} options={options} />;
 }
 
 // 一個供應商的欄位；換供應商時整個重建（key={p}），輸入框不會殘留上一家的金鑰

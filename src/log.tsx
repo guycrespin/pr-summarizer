@@ -167,12 +167,12 @@ export function LogList({ items }: { items: Item[] }) {
   return <>{out}</>;
 }
 
-// 額度用完（402 quota_exceeded）：說明＋升級按鈕
-function QuotaCard() {
+// 額度用完（402 quota_exceeded）或方案不含所選模型（402 model_not_in_plan，why: "model"）：說明＋升級按鈕
+function QuotaCard({ why }: { why?: "model" }) {
   return (
-    <div className="msg quota" id="quota-card" role="alert">
-      <strong>{t("quota.title")}</strong>
-      <span>{t("quota.body")}</span>
+    <div className="msg quota" id="quota-card" data-why={why} role="alert">
+      <strong>{t(why ? "quota.modelTitle" : "quota.title")}</strong>
+      <span>{t(why ? "quota.modelBody" : "quota.body")}</span>
       <button type="button" className="btn btn-primary" id="quota-upgrade" onClick={openUpgrade}>{t("account.upgrade")}</button>
     </div>
   );
@@ -197,7 +197,7 @@ export function LogItem({ item }: { item: Item }) {
     case "note":
       return <div className={`msg ${item.kind}`}>{item.text}</div>;
     case "quota":
-      return <QuotaCard />;
+      return <QuotaCard why={item.why} />;
     case "stats":
       return <div className="msg stats" title={item.title}>{item.text}</div>;
     case "md":

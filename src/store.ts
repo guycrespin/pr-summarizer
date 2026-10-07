@@ -23,8 +23,8 @@ export type FileItem = { id: number; kind: "file"; filename: string; content: st
 export type ConfirmItem = { id: number; kind: "confirm"; label: string; submitting: boolean; host: string; text?: string; aria?: string; mismatch?: boolean; detail?: string; state: "waiting" | "allowed" | "denied"; decide?: (ok: boolean) => void };
 export type MemoryItem = { id: number; kind: "memory"; op: "remember" | "forget"; text: string; undone?: boolean };
 export type PageItem = { id: number; kind: "page"; title: string; url: string; tabId: number };
-// 額度用完（402 quota_exceeded）：對話裡顯示說明與升級按鈕
-export type QuotaItem = { id: number; kind: "quota" };
+// 額度用完（402 quota_exceeded）或方案不含所選模型（402 model_not_in_plan，why: "model"）：對話裡顯示說明與升級按鈕
+export type QuotaItem = { id: number; kind: "quota"; why?: "model" };
 export type Item = QuotaItem | UserItem | NoteItem | StatsItem | MdItem | ThinkingItem | ToolItem | PendingItem | AskItem | FileItem | ConfirmItem | MemoryItem | PageItem;
 
 export type Suggestion = { title: string; subtitle: string; prompt: string };

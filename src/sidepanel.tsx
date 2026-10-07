@@ -8,9 +8,10 @@ import { viewerFor } from "./pdf";
 import { activeTab } from "./tools";
 import { PROVIDERS, PROVIDER_IDS, activeProvider, providerName, cleanBaseURL, conf, currentModel, isHaiku, type ProviderId } from "./providers";
 import { Select } from "./select";
+import { cloudModels } from "./cloud-models";
 import { t, currentLang } from "./i18n";
 import { LogList } from "./log";
-import { HistoryPage, SettingsPage, MemoryPage, SkillsPage, SkillEditorPage, SkillItem, Toast, ModelSelect, type Route, type Nav } from "./pages";
+import { HistoryPage, SettingsPage, MemoryPage, SkillsPage, SkillEditorPage, SkillItem, Toast, ModelSelect, CloudModelSelect, type Route, type Nav } from "./pages";
 import {
   IconGear, IconHistory, IconLines, IconLogo, IconPlus, IconSend, IconSpark, IconStop, IconTable, IconTranslate,
 } from "./icons";
@@ -152,6 +153,7 @@ function Composer() {
   // ask_user 等待回答時，輸入框送出的文字就是答案；沒打字時按鈕仍是「停止」
   const answering = !!S.asking?.reply && !!text.trim();
   const stopMode = S.busy && !answering;
+  const model = S.mode === "cloud" ? cloudModels(S.me, conf("anthropic").model).model : currentModel(activeProvider()); // 現在實際會送出的模型
   const submit = () => {
     if (answering) { S.asking!.reply!(text.trim(), []); setText(""); return; }
     if (!S.busy && text.trim()) setText("");
@@ -214,9 +216,9 @@ function Composer() {
           }}
         />
         <div className="composer-bar">
-          <ModelSelect id="model" variant="bar" p={activeProvider()} />
+          {S.mode === "cloud" ? <CloudModelSelect id="model" variant="bar" /> : <ModelSelect id="model" variant="bar" p={activeProvider()} />}
           {/* effort 是 Anthropic 的參數（cloud 固定是 Anthropic）；Haiku 不開 effort 與自適應思考 */}
-          <Select id="effort" label={t("composer.effort")} title={t("composer.effortHint")} hidden={activeProvider() !== "anthropic" || isHaiku(currentModel(activeProvider()))} value={S.effort}
+          <Select id="effort" label={t("composer.effort")} title={t("composer.effortHint")} hidden={activeProvider() !== "anthropic" || isHaiku(model)} value={S.effort}
             options={(["low", "medium", "high", "xhigh", "max"] as const).map((v) => ({ value: v, label: t(`effort.${v}`), hint: t(`effort.hint.${v}`) }))}
             onChange={(v) => {
               S.effort = v;

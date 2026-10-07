@@ -4,10 +4,11 @@ import { systemPrompt, tools, MEMORY_TOOLS, CARD_TOOLS, newTask } from "./shared
 import { memoryPrompt } from "./memory";
 import { skillsPrompt, expandSlash, slashSkill, skillModel, type Skill } from "./skills";
 import { HAIKU, migrateModel } from "./models";
+import { cloudModels } from "./cloud-models";
 import { usdOf, fmtUsd } from "./pricing";
 import { PROVIDERS, ANTHROPIC_MODELS, ProviderError, activeProvider, conf, currentModel, isHaiku, ready, streamChat, type ProviderId, type Turn } from "./providers";
 import { detectMode, type Mode } from "./mode";
-import { PAGE_TOOLS, ACTION_TOOLS, type Usage, charsOf, baHeaders, isQuota } from "./usage";
+import { PAGE_TOOLS, ACTION_TOOLS, type Usage, charsOf, baHeaders, isQuota, isModelNotInPlan } from "./usage";
 import { BACKEND, BackendError, authFetch, fetchMe, getToken } from "./backend";
 import { chatTitle, upsertChat, displayText, selectionOf, withSelection, stripDocuments, type Chat, type Block } from "./history";
 import { refreshSelection, takeSelection } from "./selection";
@@ -151,9 +152,11 @@ async function runApi(userText: string, typed: string | null, stats: Stats, sign
   const provider: ProviderId = activeProvider();
   if (!S.consent) { showView(); throw new Error(t("error.noConsent")); }
   if (!cloud && !ready()) { showView(); throw new Error(t("error.noKey")); }
-  const model = modelOverride ?? currentModel(provider);
+  // cloud：只能用 /v1/me 清單裡沒鎖的模型（技能指定的 model 也一樣，不在清單裡就用選單選的）；byok 照舊
+  const pick = cloud ? cloudModels(S.me, conf("anthropic").model, modelOverride) : null;
+  const model = pick?.model ?? modelOverride ?? currentModel(provider);
   if (!model) throw new Error(t("error.noModel"));
-  S.chatModel = (provider === "anthropic" && ANTHROPIC_MODELS.find((m) => m.value === model)?.label) || model;
+  S.chatModel = (pick ? pick.items.find((i) => i.value === model)?.label : provider === "anthropic" && ANTHROPIC_MODELS.find((m) => m.value === model)?.label) || model;
   const session = crypto.randomUUID(); // 一個任務一個 id（只有 cloud 會送出去）
   const usage: Usage = { pages: 0, actions: 0, chars: 0 };
 
@@ -279,6 +282,8 @@ export async function send(raw: string, { fromPage = false } = {}) {
     S.log = S.log.filter((x) => x.kind !== "pending");
     for (const x of S.log) if (x.kind === "thinking" && x.state === "running") x.state = "interrupted";
     if (cloud && !signal.aborted && isQuota(err)) addItem({ kind: "quota" }); // 額度用完：說明＋升級按鈕，不是原始錯誤
+    // 方案不含所選的模型：同一張卡換文字。任務結束時 addStats 會重抓 /v1/me（stats.calls ≥ 1），選單的清單與鎖頭跟著更新
+    else if (cloud && !signal.aborted && isModelNotInPlan(err)) addItem({ kind: "quota", why: "model" });
     else addItem<NoteItem>({ kind: "error", text: signal.aborted ? t("chat.stopped") : friendly(err) });
   } finally {
     controller = null;

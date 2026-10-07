@@ -337,6 +337,12 @@
   .sel-text { flex: 1; min-width: 0; display: grid; }
   .sel-label, .sel-text small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .sel-text small { color: var(--faint); font-size: 11.5px; line-height: 1.4; }
+  /* 輸入框下方的模型選單：說明（含「N 點／任務」）太長就換行，不截斷 */
+  #model-list .sel-text small { white-space: normal; }
+  /* 鎖住的項目（方案不夠）：標籤變淡、鎖頭、「需升級方案」用強調色 */
+  .sel-opt[data-locked] .sel-label { color: var(--muted); }
+  .sel-opt[data-locked] svg { color: var(--faint); }
+  .sel-text small.sel-lock { color: var(--accent); font-weight: 500; }
   .sel-empty { padding: 8px 10px; color: var(--faint); font-size: 12px; }
   .spacer { flex: 1; }
   #send {
