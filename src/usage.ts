@@ -10,4 +10,6 @@ export const baHeaders = (kind: "task" | "aux", session: string, u: Usage) => ({
 
 // 額度用完：402＋error.type quota_exceeded
 export const isQuota = (err: any) => err?.status === 402 && err?.error?.error?.type === "quota_exceeded";
+// 方案不含所選的模型：402＋error.type model_not_in_plan
+export const isModelNotInPlan = (err: any) => err?.status === 402 && err?.error?.error?.type === "model_not_in_plan";
 

@@ -1,11 +1,13 @@
 // 自家後端：匿名裝置帳號（免登入）＋ /v1/me。API 契約見 .claude/notes/saas-v2.md 第 2 節。
 // 這個檔案 sidepanel 與 background service worker 共用，只能 import 沒有畫面相依的東西。
+import type { CloudModel } from "./cloud-models";
 declare const BA_BACKEND: string; // esbuild define（scripts/build.mjs）；沒打包時（npm run check）用預設
 export const BACKEND = (typeof BA_BACKEND !== "undefined" ? BA_BACKEND : "http://localhost:4410").replace(/\/+$/, "");
 
 export type Me = {
   user_id: string; plan: string; credits_used: number; credits_limit: number;
   period_end: string; kol_code: string | null; upgrade_url: string;
+  models?: CloudModel[]; default_model?: string; // cloud 的模型選單來源（舊版後端沒有）
 };
 
 const TOKEN_KEY = "deviceToken";

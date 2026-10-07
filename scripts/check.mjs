@@ -122,7 +122,7 @@ import { messagesToOpenAI, toolsToOpenAI, cleanBaseURL } from "../src/providers"
 console.log("providers: all checks passed");
 
 // ---------- 後端記帳標頭 ----------
-import { baHeaders, charsOf, isQuota, PAGE_TOOLS, ACTION_TOOLS } from "../src/usage";
+import { baHeaders, charsOf, isQuota, isModelNotInPlan, PAGE_TOOLS, ACTION_TOOLS } from "../src/usage";
 {
   assert.deepEqual(baHeaders("task", "sid", { pages: 3, actions: 12, chars: 40211 }), { "x-ba-session": "sid", "x-ba-kind": "task", "x-ba-stats": "pages=3;actions=12;chars=40211" });
   assert.equal(baHeaders("aux", "s", { pages: 0, actions: 0, chars: 0 })["x-ba-kind"], "aux");
@@ -134,8 +134,66 @@ import { baHeaders, charsOf, isQuota, PAGE_TOOLS, ACTION_TOOLS } from "../src/us
   assert.equal(isQuota({ status: 402, error: { error: { type: "other" } } }), false);
   assert.equal(isQuota({ status: 401, error: { error: { type: "quota_exceeded" } } }), false);
   assert.equal(isQuota(new Error("x")), false);
+  // 方案不含所選模型：402＋model_not_in_plan（跟額度用完互不相認，兩種卡片的說明不一樣）
+  assert.equal(isModelNotInPlan({ status: 402, error: { type: "error", error: { type: "model_not_in_plan" } } }), true);
+  assert.equal(isModelNotInPlan({ status: 402, error: { error: { type: "quota_exceeded" } } }), false);
+  assert.equal(isQuota({ status: 402, error: { error: { type: "model_not_in_plan" } } }), false);
+  assert.equal(isModelNotInPlan({ status: 400, error: { error: { type: "model_not_in_plan" } } }), false);
+  assert.equal(isModelNotInPlan(new Error("x")), false);
 }
 console.log("usage: all checks passed");
+
+// ---------- cloud 模型選單：照 /v1/me 的 models／default_model ----------
+import { cloudModels } from "../src/cloud-models";
+{
+  const L = [
+    { id: "claude-sonnet-5-5", label: "Sonnet 5.5 Pro", tier: "balanced", credits: 2, locked: true },
+    { id: "m-fast", label: "快速", tier: "fast", credits: 1, locked: false },
+    { id: "claude-opus-5-5", label: "Opus 5.5", tier: "best", credits: 5, locked: false },
+  ];
+  const me = { models: L, default_model: "m-fast" };
+  const OPUS = "claude-opus-5-5", SONNET = "claude-sonnet-5-5";
+
+  // 還沒拿到 /v1/me（第一次啟動、離線），或舊版後端沒給清單：內建三個（沒鎖、沒點數）＋DEFAULT_MODEL
+  const builtin = ANTHROPIC_MODELS.map((m) => ({ value: m.value, label: m.label, hint: m.hint, locked: false }));
+  assert.deepEqual(cloudModels(null), { items: builtin, model: DEFAULT_MODEL });
+  for (const x of [{}, { models: [] }, { models: null }]) assert.deepEqual(cloudModels(x, OPUS), { items: builtin, model: OPUS }, `${JSON.stringify(x)}：存過的在內建清單裡就用`);
+  assert.equal(cloudModels(null, "gpt-5").model, DEFAULT_MODEL, "存過的不在內建清單裡");
+  assert.equal(cloudModels(null, "claude-haiku-5-5", "claude-haiku-5-5").model, "claude-haiku-5-5");
+
+  // 有清單：只用清單。名稱照原樣，tier 對應既有的說明字典，點數與鎖照後端
+  assert.deepEqual(cloudModels(me).items, [
+    { value: SONNET, label: "Sonnet 5.5 Pro", hint: "model.hint.sonnet", credits: 2, locked: true },
+    { value: "m-fast", label: "快速", hint: "model.hint.haiku", credits: 1, locked: false },
+    { value: OPUS, label: "Opus 5.5", hint: "model.hint.opus", credits: 5, locked: false },
+  ]);
+  assert.equal(cloudModels(me).model, "m-fast", "沒存過：default_model");
+  assert.equal(cloudModels(me, OPUS).model, OPUS, "存過的在清單裡、沒鎖：用它");
+  assert.equal(cloudModels(me, SONNET).model, "m-fast", "存過的變成 locked：default_model");
+  assert.equal(cloudModels(me, "claude-haiku-5-5").model, "m-fast", "存過的不在清單裡（就算是內建的）：default_model");
+  assert.equal(cloudModels({ models: [L[1]], default_model: "m-fast" }, SONNET).items.length, 1, "清單只有一個：選單就只有一個，不補內建的");
+
+  // 技能指定的 model（want）：在清單裡而且沒鎖才算數，否則照存過的選擇
+  assert.equal(cloudModels(me, OPUS, "m-fast").model, "m-fast");
+  assert.equal(cloudModels(me, OPUS, SONNET).model, OPUS, "want 被鎖：照存過的");
+  assert.equal(cloudModels(me, OPUS, "claude-haiku-5-5").model, OPUS, "want 不在清單裡：照存過的");
+  assert.equal(cloudModels(me, SONNET, "claude-haiku-5-5").model, "m-fast", "want 與存過的都不能用：default_model");
+  assert.equal(cloudModels(me, OPUS, null).model, OPUS);
+
+  // 後端的 default_model 不照契約（鎖住、不在清單裡、沒給）：退到清單裡第一個沒鎖的；全鎖光才退回 DEFAULT_MODEL
+  for (const d of [SONNET, "nope", undefined]) assert.equal(cloudModels({ models: L, default_model: d }).model, "m-fast", `default_model=${d}`);
+  const allLocked = { models: L.map((m) => ({ ...m, locked: true })), default_model: "m-fast" };
+  assert.equal(cloudModels(allLocked, OPUS).model, DEFAULT_MODEL);
+  assert.ok(cloudModels(allLocked).items.every((i) => i.locked));
+
+  // 欄位不照契約也不報錯：沒有 credits（舊版後端）、credits 不是數字、沒有 label、不認得的 tier、沒有 locked
+  assert.deepEqual(cloudModels({ models: [{ id: "a", label: "A", tier: "fast", locked: false }, { id: "b", label: "", tier: "weird", credits: "3", locked: undefined }, { id: "c", label: "C", tier: "best", credits: 0 }], default_model: "a" }).items, [
+    { value: "a", label: "A", hint: "model.hint.haiku", credits: undefined, locked: false },
+    { value: "b", label: "b", hint: undefined, credits: undefined, locked: false },
+    { value: "c", label: "C", hint: "model.hint.opus", credits: 0, locked: false },
+  ]);
+}
+console.log("cloud-models: all checks passed");
 
 // ---------- 模式：全新安裝 cloud；升級前設定過金鑰或自訂位址的舊使用者維持 byok ----------
 import { detectMode } from "../src/mode";
@@ -340,6 +398,7 @@ console.log("security: all checks passed");
   assert.equal(t("chat.thoughtFor", { n: 3 }), "Thought for 3s");
   setLangPref("zh-TW"); await currentDictReady();
   assert.equal(t("chat.thoughtFor", { n: 3 }), "已思考 3 秒");
+  assert.equal(t("model.credits", { n: 2 }), "2 點／任務");
   setLangPref("ja"); await currentDictReady(); // 15 個語言都已登記字典
   assert.equal(currentLang(), "ja");
   assert.equal(t("composer.send"), "送信");
