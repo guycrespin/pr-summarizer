@@ -69,10 +69,10 @@ await new Promise((r) => server.once("listening", r));
 // ---------- 假的後端：POST /v1/devices、GET /v1/me、/welcome、/upgrade（契約見 .claude/notes/saas-v2.md 第 2 節）----------
 const BACKEND_PORT = Number(process.env.E2E_PORT ?? 9394); // 預設 9394；埠被別的 e2e 佔著就設 E2E_PORT（npm run test:e2e 的 build 也會跟著指過去）
 const BACKEND = `http://127.0.0.1:${BACKEND_PORT}`;
-const be = { devices: [], me: [], pages: [] }; // 收到的請求：devices 是請求本體、me 是帶來的 x-api-key、pages 是 /welcome 與 /upgrade
+const be = { devices: [], me: [], pages: [], deviceCookies: [], links: [], logouts: [], linkMode: "ok" }; // 帳號契約：.claude/notes/accounts.md；deviceCookies＝每次 /v1/devices 收到的 cookie 標頭、links／logouts＝/v1/auth/link 與 /logout 收到的請求、linkMode＝link 要回 ok｜conflict｜already // 收到的請求：devices 是請求本體、me 是帶來的 x-api-key、pages 是 /welcome 與 /upgrade
 const issued = new Set();
 let meState = {
-  user_id: "u-1", plan: "free", credits_used: 7, credits_limit: 20, period_end: "2026-10-31", kol_code: "MATTHEW", upgrade_url: `${BACKEND}/upgrade?u=u-1`,
+  user_id: "u-1", plan: "free", credits_used: 7, credits_limit: 20, period_end: "2026-10-31", kol_code: "MATTHEW", upgrade_url: `${BACKEND}/upgrade?u=u-1`, account: null,
   read_levels: [{ chars: 8000, credits: 0 }, { chars: 15000, credits: 1 }, { chars: 30000, credits: 2 }], default_read_chars: 8000, // 讀頁字數的三檔（契約：saas-v2.md 第 2 節）；models 在需要的測試裡才加
 };
 const backendSrv = http.createServer(async (q, r) => {
@@ -83,7 +83,30 @@ const backendSrv = http.createServer(async (q, r) => {
     be.devices.push(JSON.parse(raw));
     const token = `ba_dev_test${String(be.devices.length).padStart(4, "0")}`;
     issued.add(token);
+    be.deviceCookies.push(q.headers.cookie ?? "");
+    r.setHeader("set-cookie", "__Host-ba_bid=bid-test; Path=/; Max-Age=34560000; HttpOnly; Secure; SameSite=Lax");
     return json(200, { device_token: token, user_id: "u-1" });
+  }
+  if (q.method === "GET" && q.url.startsWith("/auth/start")) { // 登入視窗第一步：種 nonce cookie（launchWebAuthFlow 與擴充功能頁共用同一個 cookie jar）
+    r.setHeader("set-cookie", "__Host-ba_auth=nonce-test; Path=/; Max-Age=600; HttpOnly; Secure; SameSite=Lax");
+    return r.end("ok");
+  }
+  if (q.method === "POST" && q.url === "/v1/auth/link") {
+    const key = q.headers["x-api-key"], cookie = q.headers.cookie ?? "";
+    be.links.push({ key, cookie, body: JSON.parse(raw) });
+    if (!issued.has(key)) return json(401, { type: "error", error: { type: "authentication_error", message: "invalid device token" } });
+    r.setHeader("set-cookie", "__Host-ba_auth=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax");
+    if (!cookie.includes("__Host-ba_auth=nonce-test")) return json(400, { type: "error", error: { type: "invalid_code", message: "invalid code" } });
+    if (be.linkMode === "conflict") return json(409, { type: "error", error: { type: "account_conflict", message: "conflict" } });
+    if (be.linkMode === "already") return json(409, { type: "error", error: { type: "already_signed_in", message: "already" } });
+    meState = { ...meState, account: { provider: "google", email: "test@example.com" } };
+    return json(200, { user_id: "u-1", account: meState.account });
+  }
+  if (q.method === "POST" && q.url === "/v1/auth/logout") {
+    be.logouts.push(q.headers["x-api-key"]);
+    issued.delete(q.headers["x-api-key"]);
+    meState = { ...meState, account: null };
+    return json(200, { ok: true });
   }
   if (q.method === "GET" && q.url === "/v1/me") {
     be.me.push(q.headers["x-api-key"]);
@@ -289,6 +312,17 @@ try {
     const orig = chrome.tabs.query.bind(chrome.tabs);
     chrome.tabs.query = async () => (await orig({})).filter((t) => t.url?.startsWith(`http://127.0.0.1:${port}/`) || t.url?.startsWith(chrome.runtime.getURL("viewer.html")));
   }, PORT);
+  // 登入視窗換成假的：先打 /auth/start（後端種 nonce cookie），再依 __auth.mode 回傳帶 code 的網址、帶 error 的網址，或像使用者關掉視窗那樣 reject
+  await panel.addInitScript(() => {
+    window.__auth = { mode: "ok", calls: [] };
+    chrome.identity.launchWebAuthFlow = async ({ url }) => {
+      window.__auth.calls.push(url);
+      if (window.__auth.mode === "cancel") throw new Error("The user did not approve access.");
+      const redirect = new URL(url).searchParams.get("redirect");
+      await fetch(url, { credentials: "include" });
+      return `${redirect}?${window.__auth.mode === "denied" ? "error=access_denied" : "code=fake-code"}`;
+    };
+  });
   // 不可逆動作改成對話裡的確認卡：刪除帳號按拒絕，其他允許。原生對話框一個都不該出現
   const dialogs = [], confirms = [];
   panel.on("dialog", (d) => { dialogs.push(d.message()); d.dismiss(); });
@@ -567,11 +601,81 @@ try {
   assert.equal(await visible("#key, #provider-select, #logout, input[type=password]"), 0, "預設看不到金鑰欄位、供應商選單");
   assert.equal(await panel.locator("#byok-summary").textContent(), zhTW["byok.title"] + zhTW["byok.off"]);
   await shot("settings-account");
-  const upgradePage = ctx.waitForEvent("page");
+  // ---------- 登入（Google／GitHub，契約 .claude/notes/accounts.md）----------
+  assert.ok(be.deviceCookies[0] === "" && be.deviceCookies.length >= 1, "第一次註冊還沒有 cookie");
+  assert.equal(await panel.locator("#account-google").textContent(), zhTW["account.google"]);
+  assert.equal(await panel.locator("#account-github").textContent(), zhTW["account.github"]);
+  assert.ok((await panel.locator("#account").textContent()).includes(zhTW["account.signInHint"]));
+  assert.equal(await panel.locator("#account-logout").count(), 0, "未登入沒有登出");
+  const authMsg = () => panel.locator("#account-msg");
+  const pagesNow = () => ctx.pages().length;
+  const authCalls = () => panel.evaluate(() => window.__auth.calls.length);
+  const setAuth = (mode) => panel.evaluate((m) => { window.__auth.mode = m; }, mode);
+  // 後端回 409：account_conflict、already_signed_in 各顯示對應訊息
+  be.linkMode = "conflict";
+  await panel.click("#account-github");
+  await until(() => authMsg().isVisible(), "account_conflict 沒顯示訊息");
+  assert.equal(await authMsg().textContent(), zhTW["account.err.account_conflict"]);
+  assert.equal(await panel.locator("#account-logout").count(), 0, "409 之後仍是未登入");
+  be.linkMode = "already";
+  await panel.click("#account-github");
+  await until(async () => (await authMsg().textContent().catch(() => "")) === zhTW["account.err.already_signed_in"], "already_signed_in 沒顯示訊息");
+  assert.ok(be.links.length >= 2 && be.links.every((l) => issued.has(l.key) && l.cookie.includes("__Host-ba_auth=nonce-test") && l.body.code === "fake-code"), "link 帶 x-api-key、nonce cookie 與 code");
+  be.linkMode = "ok";
+  // 使用者取消（關掉視窗 reject／在供應商頁按拒絕）：不顯示錯誤、不送 link
+  const linksBefore = be.links.length;
+  await setAuth("cancel");
+  await panel.click("#account-google");
+  await until(async () => (await authCalls()) >= 3, "取消的登入沒有呼叫 launchWebAuthFlow");
+  await panel.waitForTimeout(300);
+  assert.equal(await authMsg().count(), 0, "取消登入不顯示錯誤");
+  await setAuth("denied");
+  await panel.click("#account-google");
+  await until(async () => (await authCalls()) >= 4, "拒絕授權沒有呼叫 launchWebAuthFlow");
+  await panel.waitForTimeout(300);
+  assert.equal(await authMsg().count(), 0, "供應商頁按拒絕不顯示錯誤");
+  assert.equal(be.links.length, linksBefore, "取消與拒絕都沒有送 link");
+  // 付費前必須登入：未登入按升級 → 提示先登入、不開升級頁；取消登入還是不開；登入成功才開
+  const pagesBeforeUpgrade = pagesNow(), pvBefore = be.pages.length;
   await panel.click("#account-upgrade");
-  assert.equal((await upgradePage).url(), `http://127.0.0.1:${BACKEND_PORT}/upgrade?u=u-1`, "升級按鈕開 upgrade_url");
+  await until(async () => (await authMsg().textContent().catch(() => "")) === zhTW["account.loginFirst"], "未登入按升級沒有提示先登入");
+  await setAuth("cancel");
+  await panel.click("#account-google");
+  await panel.waitForTimeout(500);
+  assert.equal(pagesNow(), pagesBeforeUpgrade, "取消登入：沒有開升級頁");
+  assert.equal(be.pages.length, pvBefore, "取消登入：後端沒收到 /upgrade");
+  await setAuth("ok");
+  await panel.click("#account-upgrade");
+  await until(async () => (await authMsg().textContent().catch(() => "")) === zhTW["account.loginFirst"], "第二次按升級沒有提示先登入");
+  const upgradePage = ctx.waitForEvent("page");
+  await panel.click("#account-google");
+  assert.equal((await upgradePage).url(), `http://127.0.0.1:${BACKEND_PORT}/upgrade?u=u-1`, "登入成功後開 upgrade_url");
   await (await upgradePage).close();
   await panel.bringToFront();
+  await until(() => panel.locator("#account-user").isVisible(), "登入後沒顯示帳號");
+  assert.equal(await panel.locator("#account-user").textContent(), "已登入：test@example.com（Google）");
+  assert.equal(await panel.locator("#account-logout").textContent(), zhTW["account.signOut"]);
+  assert.equal(await panel.locator("#account-google").count(), 0, "登入後沒有登入按鈕");
+  assert.equal(await authMsg().count(), 0, "登入成功清掉訊息");
+  assert.equal(be.links.at(-1).cookie.includes("__Host-ba_auth=nonce-test"), true);
+  await shot("settings-account-signed-in");
+  // 已登入再按升級：直接開升級頁
+  const upgradePageB = ctx.waitForEvent("page");
+  await panel.click("#account-upgrade");
+  assert.equal((await upgradePageB).url(), meState.upgrade_url, "已登入：直接開 upgrade_url");
+  await (await upgradePageB).close();
+  await panel.bringToFront();
+  // 登出：後端撤銷這台的 token → 清掉、重新註冊（帶著 __Host-ba_bid）→ 回到未登入
+  const tokBeforeOut = (await panel.evaluate(() => chrome.storage.local.get("deviceToken"))).deviceToken;
+  const devicesBeforeOut = be.devices.length;
+  await panel.click("#account-logout");
+  await until(() => panel.locator("#account-google").isVisible(), "登出後沒回到未登入");
+  assert.deepEqual(be.logouts, [tokBeforeOut], "登出打 /v1/auth/logout 帶舊 token");
+  assert.equal(be.devices.length, devicesBeforeOut + 1, "登出後重新註冊");
+  assert.ok(be.deviceCookies.at(-1).includes("__Host-ba_bid=bid-test"), "第二次註冊帶 __Host-ba_bid");
+  assert.notEqual((await panel.evaluate(() => chrome.storage.local.get("deviceToken"))).deviceToken, tokBeforeOut);
+  assert.equal(await panel.locator("#account-logout").count(), 0);
+  await until(() => panel.locator("#account-credits").isVisible(), "登出後沒重抓 /v1/me");
   // 展開進階區塊（舊金鑰還留在儲存區）：開關沒打開但可以自己切回 byok
   await panel.click("#byok-summary");
   assert.equal(await panel.locator("#byok-on").isChecked(), false);
@@ -691,6 +795,17 @@ try {
   assert.equal(await ask.locator(".ask-opt.other").count(), 1, "永遠附「其他」");
   assert.equal(await panel.locator("details.tool").count(), 0, "ask_user 本身就是卡片，不另外顯示工具步驟");
   await shot("ask-waiting");
+  // 任務進行中（等回答）：登入、登出按鈕停用
+  await panel.click("#open-settings");
+  await until(() => panel.locator("#account-google").isVisible(), "任務中設定頁沒有登入按鈕");
+  assert.equal(await panel.locator("#account-google").isDisabled(), true, "任務進行中：登入停用");
+  assert.equal(await panel.locator("#account-github").isDisabled(), true);
+  await panel.click("#page-back");
+  meState = { ...meState, account: { provider: "google", email: "test@example.com" } }; // 之後的升級測試都是已登入
+  await panel.click("#open-settings");
+  await until(() => panel.locator("#account-logout").isVisible(), "任務中設定頁沒有登出按鈕");
+  assert.equal(await panel.locator("#account-logout").isDisabled(), true, "任務進行中：登出停用");
+  await panel.click("#page-back");
   await ask.locator(".ask-opt", { hasText: "方案B" }).click();
   await until(() => reqs.length === 2, "選完沒有送出下一輪");
   assert.equal(lastResult(), "使用者選了：方案B");
@@ -700,6 +815,19 @@ try {
   assert.equal(await ask.locator(".ask-opt[aria-pressed=true]").textContent(), "方案B比較便宜");
   assert.match(await ask.locator(".card-foot").textContent(), /方案B/);
   await shot("ask-answered");
+
+  // agent 不准前往／讀取後端網址（登入流程的網址列帶 code）：tool_result 是錯誤，沒開出分頁，後端也沒收到請求
+  const DENY = "ERR:這是 Browser Agent 自己的服務網址，不能由 agent 開啟";
+  for (const [name, input] of [["navigate", { url: `${BACKEND}/auth/start?provider=google` }], ["read_url", { url: `${BACKEND}/upgrade?u=u-1` }]]) {
+    const pagesBeforeDeny = pagesNow(), pvDeny = be.pages.length, reqsDeny = backendReqs.length;
+    await run(`去 ${name}`, [{ type: "tool_use", id: `deny-${name}`, name, input }]);
+    await until(() => reqs.length === 2, `${name} 後端網址：沒有送出下一輪`);
+    assert.equal(lastResult(), DENY, `${name} 指到後端 origin 要被拒絕`);
+    await idle();
+    assert.equal(pagesNow(), pagesBeforeDeny, `${name} 沒有開出分頁`);
+    assert.equal(be.pages.length, pvDeny);
+    assert.ok(!backendReqs.slice(reqsDeny).some((x) => x.includes("/auth/start") || x.includes("/upgrade")), `${name} 沒有任何請求打到後端網址`);
+  }
 
   // 「其他」聚焦輸入框，直接打字送出也是回答
   await run("再選一次", [ASK]);
@@ -893,7 +1021,7 @@ try {
   assert.equal(suggestHeaders["x-ba-stats"], "pages=0;actions=0;chars=0;searches=0");
   assert.equal(suggestHeaders["x-ba-read-chars"], "8000", "aux 也帶（伺服器不會用）");
   assert.match(suggestHeaders["x-ba-session"], /^[0-9a-f-]{36}$/);
-  assert.equal(suggestHeaders["x-api-key"], devToken);
+  assert.equal(suggestHeaders["x-api-key"], (await panel.evaluate(() => chrome.storage.local.get("deviceToken"))).deviceToken); // 登出後重新註冊過，不是最初那個 devToken
   assert.equal(suggestBody.model, "claude-haiku-5-5", "首頁建議用 Haiku 5.5");
   assert.ok(suggestBody.max_tokens <= 1024, "aux 的 max_tokens ≤ 1024");
   reqs = []; script = [{ type: "tool_use", id: "s1", name: "navigate", input: { url: EXFIL } }];
