@@ -145,7 +145,7 @@ const ATTACK = `http://127.0.0.1:${ATTACK_PORT}`;
 
 // 研究功能要讀的「外面的網站」：Chromium 用 --host-resolver-rules 把這些網域指到本機這台（照 Host 標頭分）。
 // 不用 ctx.route：擴充功能用 chrome.tabs.create 開的背景分頁，第一個請求 playwright 攔不到（會真的連出去）
-const WEB_PORT = 9395;
+const WEB_PORT = 9395 + PORT_SHIFT;
 const WEB_HOSTS = ["www.google.test", "docs.example.org", "blog.example.net", "ref.example.org", "evil.example.com"];
 const REBIND_HOST = "rebind.example.com"; // 公開網域、DNS 卻指到本機（[::1]）：測試版只把 127.0.0.1 當公開 IP
 const SERP = (q) => `<!doctype html><meta charset=utf-8><title>${q} - Google</title><div id=rso>

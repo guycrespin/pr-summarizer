@@ -319,6 +319,7 @@ async function checkReadUrl(raw: unknown, task: Task, signal?: AbortSignal): Pro
 }
 
 const LINK_LIMIT = 60; // 交給整理重點的模型挑的連結數
+const SUMMARY_INPUT_MAX = 80000; // 交給 Haiku 整理的頁面最多幾字：「全文」檔可能很長，Haiku 5.5 的 prompt 超過 10 萬 token 會改用貴 5 倍的價格
 const MAX_READS = 30; // 一個任務最多讀幾頁：被注入的頁面可以叫模型一直讀下去（每頁一個背景分頁＋一次 Haiku）
 async function readUrl(input: Input, tab: chrome.tabs.Tab, task: Task, signal?: AbortSignal): Promise<string | Block[]> {
   if (++task.reads > MAX_READS) throw new Error(`這個任務已經讀了 ${MAX_READS} 頁，不要再讀了，用目前的資料整理回答`);
@@ -347,7 +348,7 @@ async function readUrl(input: Input, tab: chrome.tabs.Tab, task: Task, signal?: 
   const limit = task.readChars ?? S.pageChars;
   const focus = String(input.focus ?? "").trim() || task.question;
   const summary = task.summarize && page.text
-    ? await task.summarize({ ...page, text: page.text.slice(0, limit) }, focus, signal).catch((e) => { if (signal?.aborted) throw e; return null; })
+    ? await task.summarize({ ...page, text: page.text.slice(0, Math.min(limit, SUMMARY_INPUT_MAX)) }, focus, signal).catch((e) => { if (signal?.aborted) throw e; return null; })
     : null;
   // 可以追的連結只認頁面上真的有的（整理重點的模型讀的是不可信的網頁，它寫出來的網址不算數）
   const links = summary == null ? page.links.slice(0, 15) : page.links.filter((l) => summary.includes(l.url)).slice(0, 8);
