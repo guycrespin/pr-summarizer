@@ -353,6 +353,7 @@ try {
   const byokSuggest = byokReqs.find((r) => r.body.output_config?.format);
   assert.equal(byokSuggest.body.model, "claude-haiku-5-5", "byok 的首頁建議也用 Haiku 5.5");
   assert.ok(byokSuggest.body.max_tokens <= 1024, "自動呼叫 max_tokens ≤ 1024");
+  assert.deepEqual(byokSuggest.body.thinking, { type: "disabled" }, "首頁建議關掉思考（Haiku 5.5 沒帶 thinking 會自己想，600 token 花在思考、JSON 被截斷）");
   for (const r of byokReqs) {
     assert.match(r.url, /^https:\/\/api\.anthropic\.com\/v1\/messages/);
     assert.equal(r.headers["x-api-key"], "sk-ant-test", "帶使用者自己的 key");
@@ -1016,7 +1017,7 @@ try {
   assert.equal(hits(), 0, "連結不會自動發出請求");
   await shot("sec-link-host");
 
-  // 技能的 model：/summarize（預設 model: haiku）這次任務改用 Haiku、不送 thinking；一般訊息照舊用選的模型
+  // 技能的 model：/summarize（預設 model: haiku）這次任務改用 Haiku、明確關掉 thinking；一般訊息照舊用選的模型
   // cloud 模式下儲存區裡的舊金鑰不影響路由：請求照樣走後端（本檔的 route 只攔後端）
   await panel.evaluate(() => chrome.storage.local.set({ provider: "anthropic", providers: { anthropic: { key: "sk-ant-test", model: "claude-sonnet-5" } } }));
   await panel.evaluate(() => chrome.storage.local.remove(["skills", "seededSkills"]));
@@ -1027,7 +1028,8 @@ try {
   await run("/summarize", []);
   await idle();
   assert.equal(reqs[0].model, "claude-haiku-5-5", "/summarize（model: haiku）用 Haiku 5.5");
-  assert.ok(!("thinking" in reqs[0]) && !("output_config" in reqs[0]), "Haiku 不送 thinking／effort");
+  assert.deepEqual(reqs[0].thinking, { type: "disabled" }, "Haiku 明確關掉思考（5.5 沒帶 thinking 會自己想）");
+  assert.ok(!("output_config" in reqs[0]), "Haiku 不送 effort");
   await run("一般問題", []);
   await idle();
   assert.equal(reqs[0].model, "claude-sonnet-5-5", "存的是舊的 claude-sonnet-5：升級後換成 5.5");
@@ -1220,8 +1222,9 @@ try {
   assert.ok(!web.reqs.some((u) => u.includes("evil.example.com")), "拒絕 → 攻擊者網站 0 請求");
   assert.equal(haikuReqs.length, 3, "每讀一頁整理一次");
   const hk = haikuReqs[0];
+  assert.deepEqual(hk.body.thinking, { type: "disabled" }, "每頁摘要關掉思考（不然 max_tokens 會花在思考、摘要被截斷）");
   assert.equal(hk.body.model, "claude-haiku-5-5");
-  assert.ok(!("thinking" in hk.body) && hk.body.max_tokens <= 1500);
+  assert.ok(hk.body.max_tokens <= 1500);
   assert.equal(hk.headers["x-ba-kind"], "task", "整理頁面算同一個任務");
   assert.equal(hk.headers["x-ba-session"], mainHeaders[0]["x-ba-session"], "跟主迴圈同一個 session");
   const docsHk = haikuReqs.find((h) => h.body.messages[0].content.includes("http://docs.example.org/a")).body.messages[0].content;

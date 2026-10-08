@@ -94,8 +94,9 @@ async function anthropicTurn(p: TurnParams): Promise<Turn> {
     {
       model: p.model, max_tokens: 64000,
       system: p.system, tools: p.tools, messages: S.messages as any,
-      // Sonnet 5.5 / Opus 5.5：自適應思考＋effort；預設不回傳思考內容，summarized 才看得到摘要。Haiku 不開（5.5 其實支援，維持不開比較省）
-      ...(isHaiku(p.model) ? {} : {
+      // Sonnet 5.5 / Opus 5.5：自適應思考＋effort；預設不回傳思考內容，summarized 才看得到摘要。
+      // Haiku 明確關掉思考：5.5 沒帶 thinking 時會自己決定要不要想（想的 token 算進 max_tokens 也算錢），維持不開比較省
+      ...(isHaiku(p.model) ? { thinking: { type: "disabled" } } : {
         thinking: { type: "adaptive", display: "summarized" },
         output_config: { effort: p.effort as any },
       }),
@@ -165,7 +166,7 @@ function summarizer(cloud: boolean, headers: () => Record<string, string> | unde
     stats.calls++;
     const h = headers();
     const msg = await (await makeClient(cloud)).messages.create(
-      { model: HAIKU, max_tokens: 1500, system: SUMMARY_SYSTEM(langEnglishName()), messages: [{ role: "user", content }] },
+      { model: HAIKU, max_tokens: 1500, thinking: { type: "disabled" }, system: SUMMARY_SYSTEM(langEnglishName()), messages: [{ role: "user", content }] }, // 關掉思考：Haiku 5.5 預設會自己想，常把 max_tokens 全花在思考、摘要被截斷
       { signal, ...(h ? { headers: h } : {}) },
     );
     const u = msg.usage;
@@ -453,7 +454,7 @@ const SUGGEST_SCHEMA = {
 async function generateSuggestions(url: string, page: { title: string; text: string }, cloud: boolean): Promise<Suggestion[]> {
   const res = await (await makeClient(cloud)).messages.create({
     // 固定用最便宜的 Haiku 5.5：每開一個新頁面都會跑一次，成本要壓到最低（自動呼叫的 max_tokens 一律 ≤ 1024）
-    model: HAIKU, max_tokens: 600,
+    model: HAIKU, max_tokens: 600, thinking: { type: "disabled" }, // 關掉思考：Haiku 5.5 預設會自己想，600 token 常全花在思考、JSON 被截斷
     output_config: { format: { type: "json_schema", schema: SUGGEST_SCHEMA } },
     system: "你替瀏覽器側邊欄 agent 產生剛好三個「使用者在這個頁面最可能想請你做的事」，彼此不重複、要具體到這一頁。"
       + `title 6–10 字、subtitle 10–16 字、prompt 是送給 agent 的完整指令。三個欄位都用 ${langEnglishName()} 撰寫。`
