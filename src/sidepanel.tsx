@@ -13,18 +13,15 @@ import { t, currentLang, type Key } from "./i18n";
 import { LogList } from "./log";
 import { HistoryPage, SettingsPage, MemoryPage, SkillsPage, SkillEditorPage, SkillItem, Toast, ModelSelect, CloudModelSelect, type Route, type Nav } from "./pages";
 import {
-  IconGear, IconHistory, IconLines, IconLogo, IconPlus, IconSend, IconSpark, IconStop, IconTable, IconTranslate,
+  IconGear, IconHistory, IconLines, IconPlus, IconSend, IconSpark, IconStop, IconTable, IconTranslate,
 } from "./icons";
 
 const lines = (s: string) => s.split("\n").flatMap((line, i) => (i ? [<br key={i} />, line] : [line]));
 
+// Chrome 側邊欄最上面本來就有擴充功能的 logo＋名稱＋關閉鈕，這裡不再重複：只留三個圖示鈕（靠右）
 function Header({ onHistory, onSettings, inert }: { onHistory: () => void; onSettings: () => void; inert: boolean }) {
   return (
     <header inert={inert}>
-      <div className="brand">
-        <div className="logo"><IconLogo /></div>
-        Browser Agent
-      </div>
       <button className="icon-btn" id="open-history" type="button" title={t("header.history")} aria-label={t("header.history")} onClick={onHistory}><IconHistory /></button>
       <button className="icon-btn" id="reset" type="button" title={t("header.newChat")} aria-label={t("header.newChat")} onClick={resetChat}><IconPlus /></button>
       <button className="icon-btn" id="open-settings" type="button" title={t("header.settings")} aria-label={t("header.settings")} onClick={onSettings}><IconGear /></button>
