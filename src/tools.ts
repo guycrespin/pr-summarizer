@@ -6,7 +6,7 @@ import { checkFile } from "./files";
 import { fetchPdf, openPdf, pdfText, isScanned, isPdfUrl, viewerFile, toBase64, PdfError, MAX_SCAN_PAGES, MAX_SCAN_BYTES } from "./pdf";
 import { S, emit, addItem, setMemories, type AskItem, type AskInput, type ConfirmItem, type NoteItem } from "./store";
 import type { Block } from "./history";
-import { displayUrl, isPrivateHost, RESEARCH_HOSTS, type Task, type Link } from "./shared";
+import { displayUrl, isPrivateHost, isPrivateIp, RESEARCH_HOSTS, type Task, type Link } from "./shared";
 import { activeProvider } from "./providers";
 import { t } from "./i18n";
 
@@ -241,24 +241,34 @@ function serp(limit: number) {
   return { results: out, blocked: location.pathname.startsWith("/sorry") || !!document.querySelector("#captcha-form, form[action*='sorry'], iframe[src*='recaptcha']") };
 }
 
-// 研究用的背景分頁：開在任務分頁的視窗、不切過去；fn 跑完、出錯或使用者按停止都會關掉
-async function inBackground<R>(url: string, windowId: number, signal: AbortSignal | undefined, fn: (tabId: number) => Promise<R>): Promise<R> {
+// 研究用的背景分頁：開在任務分頁的視窗、不切過去；fn 跑完、出錯或使用者按停止都會關掉。
+// 兩個監聽在開分頁「之前」就掛好（照 tabId 對）：分頁可能在 create 回來之前就載完。
+// ip()＝主文件實際連到的伺服器 IP（webRequest；從快取來的沒有）
+async function inBackground<R>(url: string, windowId: number, signal: AbortSignal | undefined, fn: (tabId: number, ip: () => string | undefined) => Promise<R>): Promise<R> {
   signal?.throwIfAborted();
-  const id = (await chrome.tabs.create({ url, active: false, windowId })).id!;
-  let stop = () => {};
-  const aborted = new Promise<void>((resolve) => { stop = resolve; signal?.addEventListener("abort", stop, { once: true }); });
+  let id = -1, wake = () => {};
+  const ips = new Map<number, string | undefined>(), done = new Set<number>();
+  const onResponse = (d: chrome.webRequest.OnResponseStartedDetails) => { ips.set(d.tabId, d.ip); };
+  const onUpdated = (tid: number, info: { status?: string }) => { if (info.status === "complete") { done.add(tid); if (tid === id) wake(); } };
+  const onAbort = () => wake();
+  chrome.webRequest.onResponseStarted.addListener(onResponse, { urls: ["<all_urls>"], types: ["main_frame"] });
+  chrome.tabs.onUpdated.addListener(onUpdated);
+  signal?.addEventListener("abort", onAbort, { once: true });
   try {
-    const loaded = waitLoad(id, 20000);
-    if ((await chrome.tabs.get(id)).status !== "complete") await Promise.race([loaded, aborted]);
+    id = (await chrome.tabs.create({ url, active: false, windowId })).id!;
+    if (!done.has(id) && !signal?.aborted) await new Promise<void>((resolve) => { const timer = setTimeout(resolve, 20000); wake = () => { clearTimeout(timer); resolve(); }; });
     signal?.throwIfAborted();
-    return await fn(id);
+    return await fn(id, () => ips.get(id));
   } finally {
-    signal?.removeEventListener("abort", stop);
-    chrome.tabs.remove(id).catch(() => {});
+    signal?.removeEventListener("abort", onAbort);
+    chrome.tabs.onUpdated.removeListener(onUpdated);
+    chrome.webRequest.onResponseStarted.removeListener(onResponse);
+    if (id >= 0) chrome.tabs.remove(id).catch(() => {});
   }
 }
 
 declare const BA_SEARCH: string; // esbuild define（scripts/build.mjs）：搜尋網址，後面直接接關鍵字
+declare const BA_TEST_PUBLIC_IP: string; // esbuild define：e2e 的假網站都在 127.0.0.1，測試版把它當公開 IP；正式版是空字串
 const noHash = (url: string) => url.split("#")[0];
 // 登記一個來源，回傳編號 [n]（同一個網址只登記一次）
 function addSource(url: string, title: string): number {
@@ -293,38 +303,43 @@ async function searchWeb(query: string, tab: chrome.tabs.Tab, signal?: AbortSign
     + results.map((r) => `[${addSource(r.url, r.title)}] ${r.title}\n${r.url}${r.snippet ? `\n${r.snippet}` : ""}`).join("\n\n");
 }
 
-// 能不能讀這個網址：讀過的來源（搜尋結果、頁面裡的連結）、使用者給的網站、研究用網站直接讀；
-// 其他自己組的網址先給使用者看完整網址——網址本身就能把對話內容帶出去（?q=…）
+// 能不能讀這個網址（規格：saas-v2.md 第 7 節）：跟登記過的來源（搜尋結果、頁面裡的連結）或使用者訊息裡的網址**完全相同**、
+// 或是研究用網站，才直接讀。其他自己組的網址先給使用者看完整網址——網址本身就能把對話內容帶出去（?q=…）。
+// 不放行「整個網站」：使用者正在看的、或訊息裡提到的網站都可能是攻擊者的，網頁可以叫模型讀 /c?d=<記憶>
 async function checkReadUrl(raw: unknown, task: Task, signal?: AbortSignal): Promise<URL> {
   let u: URL;
   try { u = new URL(String(raw ?? "")); } catch { throw new Error("網址格式不對"); }
   if (!/^https?:$/.test(u.protocol)) throw new Error("只接受 http(s) 網址");
   if (u.username || u.password) throw new Error("不接受帶帳號密碼的網址");
-  if (isPrivateHost(u.hostname) && !task.origins.has(u.origin)) throw new Error("不能讀本機或內網的網址（使用者自己給的除外）");
-  if (S.sources.some((x) => noHash(x.url) === noHash(u.href)) || task.origins.has(u.origin) || RESEARCH_HOSTS.includes(u.hostname)) return u;
+  const typed = task.typedUrls.has(noHash(u.href));
+  if (isPrivateHost(u.hostname) && !typed) throw new Error("不能讀本機或內網的網址（使用者自己給的網址除外）");
+  if (typed || S.sources.some((x) => noHash(x.url) === noHash(u.href)) || RESEARCH_HOSTS.includes(u.hostname)) return u;
   if (!(await confirm({ label: u.hostname, submitting: false, host: u.hostname, text: t("confirm.readUrl"), detail: displayUrl(u.href) }, signal))) throw new Error(DENIED);
-  task.origins.add(u.origin);
   return u;
 }
 
 const LINK_LIMIT = 60; // 交給整理重點的模型挑的連結數
+const MAX_READS = 30; // 一個任務最多讀幾頁：被注入的頁面可以叫模型一直讀下去（每頁一個背景分頁＋一次 Haiku）
 async function readUrl(input: Input, tab: chrome.tabs.Tab, task: Task, signal?: AbortSignal): Promise<string | Block[]> {
+  if (++task.reads > MAX_READS) throw new Error(`這個任務已經讀了 ${MAX_READS} 頁，不要再讀了，用目前的資料整理回答`);
   const u = await checkReadUrl(input.url, task, signal);
   task.tainted = true;
-  // 轉址後到了本機或內網（使用者自己給的除外）：內容不交給模型
-  const allow = (href: string) => { try { const f = new URL(href); return /^https?:$/.test(f.protocol) && (!isPrivateHost(f.hostname) || task.origins.has(f.origin)); } catch { return false; } };
+  // 轉址後、或 DNS 實際連到本機或內網（使用者自己給的網站除外）：內容不交給模型
+  const typedOrigins = new Set([...task.typedUrls].map((x) => new URL(x).origin));
+  const allow = (href: string) => { try { const f = new URL(href); return /^https?:$/.test(f.protocol) && (!isPrivateHost(f.hostname) || typedOrigins.has(f.origin)); } catch { return false; } };
+  const allowIp = (addr: string | undefined) => !addr || !isPrivateIp(addr) || addr === BA_TEST_PUBLIC_IP || typedOrigins.has(u.origin);
   let page: { title: string; url: string; text: string; links: Link[] };
   if (await isPdfUrl(u.href)) {
     const out = await readPdf(u.href, fileName(u.href), 0, signal, task.readChars, allow);
     if (typeof out !== "string") return out; // 掃描檔：原檔整份給模型（readPdf 已經問過使用者）
     page = { title: fileName(u.href), url: u.href, text: out, links: [] };
   } else {
-    page = await inBackground(u.href, tab.windowId, signal, async (id) => {
+    page = await inBackground(u.href, tab.windowId, signal, async (id, ip) => {
       let got = await inPage(id, pageMain, [LINK_LIMIT]).catch((e) => { throw new Error(`讀不到這個網頁：${e.message}`); });
       // 靠 JavaScript 畫內容的網站，載入完成時可能還沒有內容：等一下再讀一次
       if (got && got.text.length < 200) { await sleep(1500); got = (await inPage(id, pageMain, [LINK_LIMIT]).catch(() => null)) ?? got; }
       if (!got) throw new Error("讀不到這個網頁的內容");
-      if (!allow(got.url)) throw new Error("這個網址被轉到本機、內網或不是網頁的位址，已停止讀取");
+      if (!allow(got.url) || !allowIp(ip())) throw new Error("這個網址被轉到本機、內網或不是網頁的位址，已停止讀取");
       return { ...got, title: got.title || u.hostname };
     });
   }

@@ -139,14 +139,17 @@ export const CARD_TOOLS = ["ask_user", "create_file"];
 // summarize：把 read_url 讀到的頁面交給便宜的模型依問題整理（agent.ts 提供；沒有＝回傳原文）
 export type Link = { text: string; url: string };
 export type Summarizer = (page: { title: string; url: string; text: string; links: Link[] }, focus: string, signal?: AbortSignal) => Promise<string>;
-export type Task = { origins: Set<string>; tainted: boolean; readChars?: number; question: string; summarize?: Summarizer };
+// typedUrls：使用者這則訊息裡的網址（read_url 不用問就能讀的只有完全相同的網址，不是整個網站）；reads：這個任務 read_url 了幾次
+export type Task = { origins: Set<string>; tainted: boolean; readChars?: number; question: string; summarize?: Summarizer; typedUrls: Set<string>; reads: number };
 
 // 使用者打的字裡出現的網址與網域。網域沒寫協定就 http、https 都算
-export function userOrigins(text: string): string[] {
+export const userOrigins = (text: string): string[] => [...new Set(userUrls(text).map((u) => new URL(u).origin))];
+// 使用者打的字裡的完整網址（去掉 #）；只寫網域的算那個網站的首頁（http、https 都算）。read_url 只認完全相同的網址
+export function userUrls(text: string): string[] {
   const out = new Set<string>();
-  for (const m of text.matchAll(/https?:\/\/[^\s<>"'`，。、）)\]]+/gi)) { try { out.add(new URL(m[0]).origin); } catch { /* 不是網址 */ } }
+  for (const m of text.matchAll(/https?:\/\/[^\s<>"'`，。、）)\]]+/gi)) { try { out.add(new URL(m[0]).href.split("#")[0]); } catch { /* 不是網址 */ } }
   for (const m of text.matchAll(/(?<![\w.@/-])((?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,})(?::(\d{1,5}))?(?![\w-])/gi)) {
-    for (const p of ["https:", "http:"]) { try { out.add(new URL(`${p}//${m[1]}${m[2] ? `:${m[2]}` : ""}`).origin); } catch { /* 略過 */ } }
+    for (const p of ["https:", "http:"]) { try { out.add(new URL(`${p}//${m[1]}${m[2] ? `:${m[2]}` : ""}/`).href); } catch { /* 略過 */ } }
   }
   return [...out];
 }
@@ -154,7 +157,7 @@ export function userOrigins(text: string): string[] {
 export function newTask(startUrl: string | undefined, userText: string, tainted: boolean, readChars?: number): Task {
   const origins = new Set(userOrigins(userText));
   try { if (startUrl) origins.add(new URL(startUrl).origin); } catch { /* 內建頁 */ }
-  return { origins, tainted, readChars, question: userText };
+  return { origins, tainted, readChars, question: userText, typedUrls: new Set(userUrls(userText)), reads: 0 };
 }
 
 // 來源：搜尋結果、讀過的頁面、頁面裡值得追的連結。編號 [n]＝陣列位置＋1，整個對話共用（存進歷史）
@@ -164,10 +167,19 @@ export type Source = { url: string; title: string };
 export const RESEARCH_HOSTS = ["github.com", "api.github.com", "raw.githubusercontent.com", "www.npmjs.com", "npmjs.com", "registry.npmjs.org", "api.npmjs.org"];
 
 // 本機、內網、單一標籤主機名（公司內網常見）、IPv6 字面位址（一律當內網，公開網站幾乎不用）。
-// host 要先經過 new URL() 正規化（0x7f.1、2130706433 這類寫法會變成 127.0.0.1）。ponytail: 只看字面，DNS 指到內網的公開網域擋不到
+// host 要先經過 new URL() 正規化（0x7f.1、2130706433 這類寫法會變成 127.0.0.1）。只看字面：DNS 指到內網的公開網域由 read_url 用實際連到的 IP（isPrivateIp）另外擋
 export function isPrivateHost(host: string): boolean {
   const h = host.toLowerCase().replace(/\.$/, "");
-  if (!h.includes(".") || h.includes(":") || /(^|\.)(localhost|local|internal|lan|home|intranet|corp)$/.test(h)) return true;
+  return !h.includes(".") || h.includes(":") || /(^|\.)(localhost|local|internal|lan|home|intranet|corp)$/.test(h) || isPrivateIp(h);
+}
+
+// 伺服器實際連到的 IP（webRequest 的 ip）是不是本機／內網：擋「公開網域的 DNS 指到內網」。不是 IP 的字串回 false
+export function isPrivateIp(addr: string): boolean {
+  const h = addr.toLowerCase().replace(/^\[|\]$/g, "");
+  if (h.includes(":")) {
+    const v4 = h.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+    return v4 ? isPrivateIp(v4[1]) : h === "::1" || h === "::" || /^f[cd]/.test(h) || /^fe[89ab]/.test(h);
+  }
   const ip = h.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
   if (!ip) return false;
   const [a, b] = [Number(ip[1]), Number(ip[2])];

