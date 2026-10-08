@@ -39,10 +39,10 @@ FEATURES
 • Light and dark themes; interface in 15 languages
 
 PRIVACY
-Your conversations, memories, skills and settings are stored only in your browser (chrome.storage.local). In Cloud mode, requests pass through our server to the AI model provider; we keep usage records (model, tokens, credits) to count credits — not your messages, page content or the model's replies. With your own key, requests go straight to your provider and nothing goes to us. Research uses your own browser: searches are Google (or Bing) searches from your browser, and pages load with your signed-in sessions. Paid plans are bought through Paddle, which handles payment details. No ads, no third-party analytics. Before you start, the extension shows a short notice and asks you to agree. Full privacy policy: https://github.com/Wadoekeani/browser-agent/blob/main/store/privacy-policy.md
+Your conversations, memories, skills and settings are stored only in your browser (chrome.storage.local). In Cloud mode, requests pass through our server to the AI model provider; we keep usage records (model, tokens, credits) to count credits — not your messages, page content or the model's replies. With your own key, requests go straight to your provider and nothing goes to us. Research uses your own browser: searches are Google (or Bing) searches from your browser, and pages load with your signed-in sessions. Paid plans are bought through Paddle, which handles payment details. No ads, no third-party analytics. Before you start, the extension shows a short notice and asks you to agree. Full privacy policy: https://github.com/io-software-ai/browser-agent/blob/main/store/privacy-policy.md
 
 OPEN SOURCE
-The extension is MIT licensed. Source code: https://github.com/Wadoekeani/browser-agent
+The extension is MIT licensed. Source code: https://github.com/io-software-ai/browser-agent
 
 Browser Agent is an independent project, not affiliated with or endorsed by Anthropic, OpenAI or Google.
 

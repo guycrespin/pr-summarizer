@@ -6,9 +6,9 @@
 
 **Un agente IA nel tuo browser che lavora direttamente sul sito che stai guardando. Legge la pagina, clicca, digita e passa da una pagina all'altra per te — e quando una pagina non basta, fa ricerche su tutto il web e risponde con le fonti.**
 
-[![CI](https://github.com/Wadoekeani/browser-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Wadoekeani/browser-agent/actions/workflows/ci.yml)
+[![CI](https://github.com/io-software-ai/browser-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/io-software-ai/browser-agent/actions/workflows/ci.yml)
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/iebcachfohpddakkmnopkpfnjibdlhai?label=Chrome%20Web%20Store&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/browser-agent/iebcachfohpddakkmnopkpfnjibdlhai)
-[![Release](https://img.shields.io/github/v/release/Wadoekeani/browser-agent)](https://github.com/Wadoekeani/browser-agent/releases/latest)
+[![Release](https://img.shields.io/github/v/release/io-software-ai/browser-agent)](https://github.com/io-software-ai/browser-agent/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Chrome 122+](https://img.shields.io/badge/Chrome-122%2B-4285F4?logo=googlechrome&logoColor=white)
 
@@ -88,7 +88,7 @@ Richiede Chrome 122+.
 
 Le Release possono essere più avanti dello store mentre una nuova versione attende la revisione. Non serve Node.js né una fase di build.
 
-1. Scarica `browser-agent-<version>.zip` dall'[ultima release](https://github.com/Wadoekeani/browser-agent/releases/latest) ed estrailo.
+1. Scarica `browser-agent-<version>.zip` dall'[ultima release](https://github.com/io-software-ai/browser-agent/releases/latest) ed estrailo.
 2. Apri `chrome://extensions` e attiva **Modalità sviluppatore** (in alto a destra).
 3. Clicca **Carica non pacchettizzata** e scegli la cartella estratta, poi continua dal passaggio 2 sopra.
 
@@ -99,7 +99,7 @@ Per aggiornare, scarica il nuovo zip, sostituisci il contenuto della stessa cart
 Serve Node.js 22+.
 
 ```bash
-git clone https://github.com/Wadoekeani/browser-agent.git
+git clone https://github.com/io-software-ai/browser-agent.git
 cd browser-agent
 npm ci
 npm run build

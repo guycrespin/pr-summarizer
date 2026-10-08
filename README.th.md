@@ -6,9 +6,9 @@
 
 **AI เอเจนต์ในเบราว์เซอร์ที่ทำงานบนเว็บไซต์ที่คุณกำลังดูอยู่โดยตรง อ่านหน้า คลิก พิมพ์ และเปลี่ยนหน้าให้คุณ — และเมื่อหน้าเดียวไม่พอ ก็ค้นคว้าทั่วเว็บแล้วตอบพร้อมแหล่งอ้างอิง**
 
-[![CI](https://github.com/Wadoekeani/browser-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Wadoekeani/browser-agent/actions/workflows/ci.yml)
+[![CI](https://github.com/io-software-ai/browser-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/io-software-ai/browser-agent/actions/workflows/ci.yml)
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/iebcachfohpddakkmnopkpfnjibdlhai?label=Chrome%20Web%20Store&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/browser-agent/iebcachfohpddakkmnopkpfnjibdlhai)
-[![Release](https://img.shields.io/github/v/release/Wadoekeani/browser-agent)](https://github.com/Wadoekeani/browser-agent/releases/latest)
+[![Release](https://img.shields.io/github/v/release/io-software-ai/browser-agent)](https://github.com/io-software-ai/browser-agent/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Chrome 122+](https://img.shields.io/badge/Chrome-122%2B-4285F4?logo=googlechrome&logoColor=white)
 
@@ -88,7 +88,7 @@
 
 Release อาจมาก่อนเวอร์ชันบนสโตร์ในช่วงที่เวอร์ชันใหม่กำลังรอตรวจสอบ ไม่ต้องใช้ Node.js หรือขั้นตอนบิลด์ใดๆ
 
-1. ดาวน์โหลด `browser-agent-<version>.zip` จาก[รีลีสล่าสุด](https://github.com/Wadoekeani/browser-agent/releases/latest) แล้วแตกไฟล์
+1. ดาวน์โหลด `browser-agent-<version>.zip` จาก[รีลีสล่าสุด](https://github.com/io-software-ai/browser-agent/releases/latest) แล้วแตกไฟล์
 2. เปิด `chrome://extensions` แล้วเปิด **Developer mode** (โหมดสำหรับนักพัฒนาซอฟต์แวร์ มุมขวาบน)
 3. คลิก **Load unpacked** (โหลดส่วนขยายที่ยังไม่ได้แพ็กเกจ) แล้วเลือกโฟลเดอร์ที่แตกไฟล์ไว้ จากนั้นทำต่อจากขั้นตอนที่ 2 ด้านบน
 
@@ -99,7 +99,7 @@ Release อาจมาก่อนเวอร์ชันบนสโตร์
 ต้องใช้ Node.js 22 ขึ้นไป
 
 ```bash
-git clone https://github.com/Wadoekeani/browser-agent.git
+git clone https://github.com/io-software-ai/browser-agent.git
 cd browser-agent
 npm ci
 npm run build

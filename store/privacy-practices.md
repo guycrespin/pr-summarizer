@@ -59,7 +59,7 @@
 
 ## 6. Privacy policy URL
 
-必填。填 https://github.com/Wadoekeani/browser-agent/blob/main/store/privacy-policy.md（repo 裡的隱私權政策，推上 GitHub 後即可公開存取；商店說明也已經用這個網址）。
+必填。填 https://github.com/io-software-ai/browser-agent/blob/main/store/privacy-policy.md（repo 裡的隱私權政策，推上 GitHub 後即可公開存取；商店說明也已經用這個網址）。
 
 ## 7. 審查前要處理（不是表單欄位，但會影響上架）
 

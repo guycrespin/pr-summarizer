@@ -6,9 +6,9 @@
 
 **Tarayıcınızda, baktığınız siteyle doğrudan çalışan bir AI ajanı. Sayfayı okur, tıklar, yazar ve sizin yerinize sayfalar arasında gezinir — tek sayfa yetmediğinde ise web genelinde araştırma yapıp kaynaklarıyla yanıt verir.**
 
-[![CI](https://github.com/Wadoekeani/browser-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Wadoekeani/browser-agent/actions/workflows/ci.yml)
+[![CI](https://github.com/io-software-ai/browser-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/io-software-ai/browser-agent/actions/workflows/ci.yml)
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/iebcachfohpddakkmnopkpfnjibdlhai?label=Chrome%20Web%20Store&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/browser-agent/iebcachfohpddakkmnopkpfnjibdlhai)
-[![Release](https://img.shields.io/github/v/release/Wadoekeani/browser-agent)](https://github.com/Wadoekeani/browser-agent/releases/latest)
+[![Release](https://img.shields.io/github/v/release/io-software-ai/browser-agent)](https://github.com/io-software-ai/browser-agent/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Chrome 122+](https://img.shields.io/badge/Chrome-122%2B-4285F4?logo=googlechrome&logoColor=white)
 
@@ -88,7 +88,7 @@ Chrome 122+ gerektirir.
 
 Yeni bir sürüm incelemeyi beklerken Release'ler mağazadaki sürümün önünde olabilir. Node.js veya build adımına gerek yok.
 
-1. [En son sürümden](https://github.com/Wadoekeani/browser-agent/releases/latest) `browser-agent-<version>.zip` dosyasını indirin ve açın.
+1. [En son sürümden](https://github.com/io-software-ai/browser-agent/releases/latest) `browser-agent-<version>.zip` dosyasını indirin ve açın.
 2. `chrome://extensions` sayfasını açın ve **Geliştirici modu**nu (sağ üstte) etkinleştirin.
 3. **Paketlenmemiş öğe yükle**'ye tıklayın ve açtığınız klasörü seçin, ardından yukarıdaki 2. adımdan devam edin.
 
@@ -99,7 +99,7 @@ Güncellemek için yeni zip dosyasını indirin, aynı klasörün içeriğini de
 Node.js 22+ gerekir.
 
 ```bash
-git clone https://github.com/Wadoekeani/browser-agent.git
+git clone https://github.com/io-software-ai/browser-agent.git
 cd browser-agent
 npm ci
 npm run build

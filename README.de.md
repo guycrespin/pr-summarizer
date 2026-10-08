@@ -6,9 +6,9 @@
 
 **Ein KI-Agent in Ihrem Browser, der direkt auf der Website arbeitet, die Sie gerade ansehen. Er liest die Seite, klickt, tippt und wechselt für Sie zwischen Seiten – und wenn eine Seite nicht reicht, recherchiert er im ganzen Web und antwortet mit Quellen.**
 
-[![CI](https://github.com/Wadoekeani/browser-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Wadoekeani/browser-agent/actions/workflows/ci.yml)
+[![CI](https://github.com/io-software-ai/browser-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/io-software-ai/browser-agent/actions/workflows/ci.yml)
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/iebcachfohpddakkmnopkpfnjibdlhai?label=Chrome%20Web%20Store&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/browser-agent/iebcachfohpddakkmnopkpfnjibdlhai)
-[![Release](https://img.shields.io/github/v/release/Wadoekeani/browser-agent)](https://github.com/Wadoekeani/browser-agent/releases/latest)
+[![Release](https://img.shields.io/github/v/release/io-software-ai/browser-agent)](https://github.com/io-software-ai/browser-agent/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Chrome 122+](https://img.shields.io/badge/Chrome-122%2B-4285F4?logo=googlechrome&logoColor=white)
 
@@ -88,7 +88,7 @@ Erfordert Chrome 122+.
 
 Releases können der Store-Version voraus sein, während eine neue Version auf ihre Überprüfung wartet. Kein Node.js oder Build-Schritt nötig.
 
-1. Laden Sie `browser-agent-<version>.zip` vom [neuesten Release](https://github.com/Wadoekeani/browser-agent/releases/latest) herunter und entpacken Sie es.
+1. Laden Sie `browser-agent-<version>.zip` vom [neuesten Release](https://github.com/io-software-ai/browser-agent/releases/latest) herunter und entpacken Sie es.
 2. Öffnen Sie `chrome://extensions` und aktivieren Sie oben rechts den **Entwicklermodus**.
 3. Klicken Sie auf **Entpackte Erweiterung laden** und wählen Sie den entpackten Ordner, und fahren Sie dann bei Schritt 2 oben fort.
 
@@ -99,7 +99,7 @@ Zum Aktualisieren laden Sie das neue Zip herunter, ersetzen den Inhalt desselben
 Sie brauchen Node.js 22+.
 
 ```bash
-git clone https://github.com/Wadoekeani/browser-agent.git
+git clone https://github.com/io-software-ai/browser-agent.git
 cd browser-agent
 npm ci
 npm run build

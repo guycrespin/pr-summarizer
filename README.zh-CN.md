@@ -6,9 +6,9 @@
 
 **把 AI agent 放进你的浏览器，直接操作你正在看的网站：读页面、点击、输入、在页面之间跳转都交给它；一页不够时，它还能跨网站做研究，给你附带来源的答案。**
 
-[![CI](https://github.com/Wadoekeani/browser-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Wadoekeani/browser-agent/actions/workflows/ci.yml)
+[![CI](https://github.com/io-software-ai/browser-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/io-software-ai/browser-agent/actions/workflows/ci.yml)
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/iebcachfohpddakkmnopkpfnjibdlhai?label=Chrome%20Web%20Store&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/browser-agent/iebcachfohpddakkmnopkpfnjibdlhai)
-[![Release](https://img.shields.io/github/v/release/Wadoekeani/browser-agent)](https://github.com/Wadoekeani/browser-agent/releases/latest)
+[![Release](https://img.shields.io/github/v/release/io-software-ai/browser-agent)](https://github.com/io-software-ai/browser-agent/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Chrome 122+](https://img.shields.io/badge/Chrome-122%2B-4285F4?logo=googlechrome&logoColor=white)
 
@@ -88,7 +88,7 @@
 
 新版本在等商店审核期间，Release 可能比商店更新。不需要 Node.js，也不用自己构建。
 
-1. 从[最新 Release](https://github.com/Wadoekeani/browser-agent/releases/latest) 下载 `browser-agent-<版本号>.zip` 并解压。
+1. 从[最新 Release](https://github.com/io-software-ai/browser-agent/releases/latest) 下载 `browser-agent-<版本号>.zip` 并解压。
 2. 打开 `chrome://extensions`，开启右上角的**开发者模式**。
 3. 点击**加载已解压的扩展程序**，选中刚解压出来的文件夹，然后从上面第 2 步继续。
 
@@ -99,7 +99,7 @@
 需要 Node.js 22 及以上版本。
 
 ```bash
-git clone https://github.com/Wadoekeani/browser-agent.git
+git clone https://github.com/io-software-ai/browser-agent.git
 cd browser-agent
 npm ci
 npm run build

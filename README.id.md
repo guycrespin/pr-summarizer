@@ -6,9 +6,9 @@
 
 **Agen AI di browser Anda yang bekerja langsung di situs yang sedang Anda lihat. Ia membaca halaman, mengklik, mengetik, dan berpindah antarhalaman untuk Anda — dan saat satu halaman tidak cukup, ia meriset di seluruh web lalu menjawab lengkap dengan sumber.**
 
-[![CI](https://github.com/Wadoekeani/browser-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Wadoekeani/browser-agent/actions/workflows/ci.yml)
+[![CI](https://github.com/io-software-ai/browser-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/io-software-ai/browser-agent/actions/workflows/ci.yml)
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/iebcachfohpddakkmnopkpfnjibdlhai?label=Chrome%20Web%20Store&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/browser-agent/iebcachfohpddakkmnopkpfnjibdlhai)
-[![Release](https://img.shields.io/github/v/release/Wadoekeani/browser-agent)](https://github.com/Wadoekeani/browser-agent/releases/latest)
+[![Release](https://img.shields.io/github/v/release/io-software-ai/browser-agent)](https://github.com/io-software-ai/browser-agent/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Chrome 122+](https://img.shields.io/badge/Chrome-122%2B-4285F4?logo=googlechrome&logoColor=white)
 
@@ -88,7 +88,7 @@ Membutuhkan Chrome 122+.
 
 Release bisa lebih baru daripada versi di store selagi versi baru menunggu peninjauan. Tidak perlu Node.js atau proses build.
 
-1. Unduh `browser-agent-<version>.zip` dari [rilis terbaru](https://github.com/Wadoekeani/browser-agent/releases/latest) dan ekstrak.
+1. Unduh `browser-agent-<version>.zip` dari [rilis terbaru](https://github.com/io-software-ai/browser-agent/releases/latest) dan ekstrak.
 2. Buka `chrome://extensions` dan aktifkan **Mode pengembang** (di kanan atas).
 3. Klik **Muat yang belum dikemas** dan pilih folder hasil ekstrak, lalu lanjutkan dari langkah 2 di atas.
 
@@ -99,7 +99,7 @@ Untuk memperbarui, unduh zip baru, ganti isi folder yang sama, lalu klik ikon re
 Anda memerlukan Node.js 22+.
 
 ```bash
-git clone https://github.com/Wadoekeani/browser-agent.git
+git clone https://github.com/io-software-ai/browser-agent.git
 cd browser-agent
 npm ci
 npm run build

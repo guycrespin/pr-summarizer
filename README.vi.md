@@ -6,9 +6,9 @@
 
 **Một AI agent ngay trong trình duyệt, làm việc trực tiếp trên trang web bạn đang xem. Nó đọc trang, bấm, nhập và chuyển giữa các trang thay bạn — và khi một trang chưa đủ, nó nghiên cứu trên toàn web rồi trả lời kèm nguồn.**
 
-[![CI](https://github.com/Wadoekeani/browser-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Wadoekeani/browser-agent/actions/workflows/ci.yml)
+[![CI](https://github.com/io-software-ai/browser-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/io-software-ai/browser-agent/actions/workflows/ci.yml)
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/iebcachfohpddakkmnopkpfnjibdlhai?label=Chrome%20Web%20Store&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/browser-agent/iebcachfohpddakkmnopkpfnjibdlhai)
-[![Release](https://img.shields.io/github/v/release/Wadoekeani/browser-agent)](https://github.com/Wadoekeani/browser-agent/releases/latest)
+[![Release](https://img.shields.io/github/v/release/io-software-ai/browser-agent)](https://github.com/io-software-ai/browser-agent/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Chrome 122+](https://img.shields.io/badge/Chrome-122%2B-4285F4?logo=googlechrome&logoColor=white)
 
@@ -88,7 +88,7 @@ Yêu cầu Chrome 122+.
 
 Release có thể đi trước phiên bản trên cửa hàng trong lúc phiên bản mới chờ duyệt. Không cần Node.js hay bước build nào.
 
-1. Tải `browser-agent-<version>.zip` từ [bản phát hành mới nhất](https://github.com/Wadoekeani/browser-agent/releases/latest) và giải nén.
+1. Tải `browser-agent-<version>.zip` từ [bản phát hành mới nhất](https://github.com/io-software-ai/browser-agent/releases/latest) và giải nén.
 2. Mở `chrome://extensions` và bật **Chế độ dành cho nhà phát triển** (góc trên bên phải).
 3. Nhấp **Tải tiện ích đã giải nén** và chọn thư mục vừa giải nén, sau đó tiếp tục từ bước 2 ở trên.
 
@@ -99,7 +99,7 @@ Release có thể đi trước phiên bản trên cửa hàng trong lúc phiên 
 Cần Node.js 22+.
 
 ```bash
-git clone https://github.com/Wadoekeani/browser-agent.git
+git clone https://github.com/io-software-ai/browser-agent.git
 cd browser-agent
 npm ci
 npm run build

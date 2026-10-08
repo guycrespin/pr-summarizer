@@ -6,9 +6,9 @@
 
 **AI エージェントをブラウザに。今見ているサイトの上で直接作業します。ページを読み、クリックし、入力し、ページ間を移動する——そして 1 ページで足りないときは、Web 全体を調べて出典つきで答えます。**
 
-[![CI](https://github.com/Wadoekeani/browser-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Wadoekeani/browser-agent/actions/workflows/ci.yml)
+[![CI](https://github.com/io-software-ai/browser-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/io-software-ai/browser-agent/actions/workflows/ci.yml)
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/iebcachfohpddakkmnopkpfnjibdlhai?label=Chrome%20Web%20Store&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/browser-agent/iebcachfohpddakkmnopkpfnjibdlhai)
-[![Release](https://img.shields.io/github/v/release/Wadoekeani/browser-agent)](https://github.com/Wadoekeani/browser-agent/releases/latest)
+[![Release](https://img.shields.io/github/v/release/io-software-ai/browser-agent)](https://github.com/io-software-ai/browser-agent/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Chrome 122+](https://img.shields.io/badge/Chrome-122%2B-4285F4?logo=googlechrome&logoColor=white)
 
@@ -88,7 +88,7 @@ Chrome 122 以降が必要です。
 
 新しいバージョンが審査待ちの間は、リリースのほうがストアより新しいことがあります。Node.js もビルド作業も不要です。
 
-1. [最新リリース](https://github.com/Wadoekeani/browser-agent/releases/latest)から `browser-agent-<バージョン>.zip` をダウンロードして解凍します。
+1. [最新リリース](https://github.com/io-software-ai/browser-agent/releases/latest)から `browser-agent-<バージョン>.zip` をダウンロードして解凍します。
 2. `chrome://extensions` を開き、右上の**デベロッパー モード**をオンにします。
 3. **パッケージ化されていない拡張機能を読み込む**をクリックし、解凍したフォルダを選びます。続きは上の手順 2 から進めてください。
 
@@ -99,7 +99,7 @@ Chrome 122 以降が必要です。
 Node.js 22 以上が必要です。
 
 ```bash
-git clone https://github.com/Wadoekeani/browser-agent.git
+git clone https://github.com/io-software-ai/browser-agent.git
 cd browser-agent
 npm ci
 npm run build

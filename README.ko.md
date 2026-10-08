@@ -6,9 +6,9 @@
 
 **AI 에이전트를 브라우저 안에. 지금 보고 있는 사이트에서 직접 일합니다. 페이지를 읽고, 클릭하고, 입력하고, 페이지 사이를 이동합니다. 한 페이지로 부족하면 웹 전반을 조사해 출처와 함께 답합니다.**
 
-[![CI](https://github.com/Wadoekeani/browser-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Wadoekeani/browser-agent/actions/workflows/ci.yml)
+[![CI](https://github.com/io-software-ai/browser-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/io-software-ai/browser-agent/actions/workflows/ci.yml)
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/iebcachfohpddakkmnopkpfnjibdlhai?label=Chrome%20Web%20Store&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/browser-agent/iebcachfohpddakkmnopkpfnjibdlhai)
-[![Release](https://img.shields.io/github/v/release/Wadoekeani/browser-agent)](https://github.com/Wadoekeani/browser-agent/releases/latest)
+[![Release](https://img.shields.io/github/v/release/io-software-ai/browser-agent)](https://github.com/io-software-ai/browser-agent/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Chrome 122+](https://img.shields.io/badge/Chrome-122%2B-4285F4?logo=googlechrome&logoColor=white)
 
@@ -88,7 +88,7 @@ Chrome 122 이상이 필요합니다.
 
 새 버전이 심사를 기다리는 동안 Release가 스토어보다 앞설 수 있습니다. Node.js도, 빌드 과정도 필요 없습니다.
 
-1. [최신 릴리스](https://github.com/Wadoekeani/browser-agent/releases/latest)에서 `browser-agent-<버전>.zip`을 내려받아 압축을 풉니다.
+1. [최신 릴리스](https://github.com/io-software-ai/browser-agent/releases/latest)에서 `browser-agent-<버전>.zip`을 내려받아 압축을 풉니다.
 2. `chrome://extensions`를 열고 오른쪽 위의 **개발자 모드**를 켭니다.
 3. **압축해제된 확장 프로그램을 로드합니다**를 클릭하고 방금 압축을 푼 폴더를 선택한 다음, 위의 2단계부터 이어서 진행하세요.
 
@@ -99,7 +99,7 @@ Chrome 122 이상이 필요합니다.
 Node.js 22 이상이 필요합니다.
 
 ```bash
-git clone https://github.com/Wadoekeani/browser-agent.git
+git clone https://github.com/io-software-ai/browser-agent.git
 cd browser-agent
 npm ci
 npm run build

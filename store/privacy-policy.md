@@ -92,7 +92,7 @@ When this policy changes, we update the date at the top.
 
 ## Contact
 
-Privacy requests: [CONTACT EMAIL]. Other questions: https://github.com/Wadoekeani/browser-agent/issues
+Privacy requests: [CONTACT EMAIL]. Other questions: https://github.com/io-software-ai/browser-agent/issues
 
 ---
 
@@ -191,4 +191,4 @@ The use of information received from Google APIs will adhere to the Chrome Web S
 
 ## 聯絡方式
 
-隱私相關請求：[聯絡信箱]。其他問題：https://github.com/Wadoekeani/browser-agent/issues
+隱私相關請求：[聯絡信箱]。其他問題：https://github.com/io-software-ai/browser-agent/issues

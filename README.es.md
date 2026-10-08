@@ -6,9 +6,9 @@
 
 **Un agente de IA en tu navegador que trabaja directamente sobre el sitio que estás viendo. Lee la página, hace clic, escribe y se mueve entre páginas por ti — y cuando una página no basta, investiga por toda la web y responde con fuentes.**
 
-[![CI](https://github.com/Wadoekeani/browser-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Wadoekeani/browser-agent/actions/workflows/ci.yml)
+[![CI](https://github.com/io-software-ai/browser-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/io-software-ai/browser-agent/actions/workflows/ci.yml)
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/iebcachfohpddakkmnopkpfnjibdlhai?label=Chrome%20Web%20Store&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/browser-agent/iebcachfohpddakkmnopkpfnjibdlhai)
-[![Release](https://img.shields.io/github/v/release/Wadoekeani/browser-agent)](https://github.com/Wadoekeani/browser-agent/releases/latest)
+[![Release](https://img.shields.io/github/v/release/io-software-ai/browser-agent)](https://github.com/io-software-ai/browser-agent/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Chrome 122+](https://img.shields.io/badge/Chrome-122%2B-4285F4?logo=googlechrome&logoColor=white)
 
@@ -88,7 +88,7 @@ Requiere Chrome 122 o superior.
 
 Los Release pueden ir por delante de la tienda mientras una versión nueva espera revisión. No hace falta Node.js ni compilar nada.
 
-1. Descarga `browser-agent-<versión>.zip` desde la [última versión](https://github.com/Wadoekeani/browser-agent/releases/latest) y descomprímelo.
+1. Descarga `browser-agent-<versión>.zip` desde la [última versión](https://github.com/io-software-ai/browser-agent/releases/latest) y descomprímelo.
 2. Abre `chrome://extensions` y activa el **Modo de desarrollador** (arriba a la derecha).
 3. Haz clic en **Cargar descomprimida** y elige la carpeta descomprimida; luego continúa desde el paso 2 de arriba.
 
@@ -99,7 +99,7 @@ Para actualizar, descarga el nuevo zip, sustituye el contenido de la misma carpe
 Necesitas Node.js 22 o superior.
 
 ```bash
-git clone https://github.com/Wadoekeani/browser-agent.git
+git clone https://github.com/io-software-ai/browser-agent.git
 cd browser-agent
 npm ci
 npm run build

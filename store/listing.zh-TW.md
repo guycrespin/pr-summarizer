@@ -39,10 +39,10 @@ Browser Agent 把 AI agent 放進你的瀏覽器，直接操作你正在看的�
 • 淺色與深色主題；介面有 15 種語言
 
 隱私
-你的對話、記憶、技能和設定只存在你的瀏覽器裡（chrome.storage.local）。Cloud 模式下，請求會經過我們的伺服器送到 AI 模型供應商；我們會保留用量紀錄（模型、token 數、點數）來計算點數，不會保留你的訊息、頁面內容或模型的回覆。用自己的金鑰時，請求直接送到你的供應商，完全不經過我們。研究用的是你自己的瀏覽器：搜尋就是從你的瀏覽器做 Google（或 Bing）搜尋，網頁會帶著你的登入狀態載入。付費方案透過 Paddle 購買，付款資料由 Paddle 處理。沒有廣告、沒有第三方分析。開始之前，擴充功能會先顯示一段簡短說明並請你同意。完整隱私權政策：https://github.com/Wadoekeani/browser-agent/blob/main/store/privacy-policy.md
+你的對話、記憶、技能和設定只存在你的瀏覽器裡（chrome.storage.local）。Cloud 模式下，請求會經過我們的伺服器送到 AI 模型供應商；我們會保留用量紀錄（模型、token 數、點數）來計算點數，不會保留你的訊息、頁面內容或模型的回覆。用自己的金鑰時，請求直接送到你的供應商，完全不經過我們。研究用的是你自己的瀏覽器：搜尋就是從你的瀏覽器做 Google（或 Bing）搜尋，網頁會帶著你的登入狀態載入。付費方案透過 Paddle 購買，付款資料由 Paddle 處理。沒有廣告、沒有第三方分析。開始之前，擴充功能會先顯示一段簡短說明並請你同意。完整隱私權政策：https://github.com/io-software-ai/browser-agent/blob/main/store/privacy-policy.md
 
 開放原始碼
-擴充功能採用 MIT 授權。原始碼：https://github.com/Wadoekeani/browser-agent
+擴充功能採用 MIT 授權。原始碼：https://github.com/io-software-ai/browser-agent
 
 Browser Agent 是獨立專案，與 Anthropic、OpenAI、Google 無隸屬或背書關係。
 
