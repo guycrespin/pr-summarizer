@@ -268,6 +268,7 @@ function App() {
   const openers = useRef<string[]>([]);
   const refocus = useRef<string | null>(null);
   useEffect(() => { showView(); }, []);
+  useEffect(() => { if (!S.loginPrompt) return; S.loginPrompt = false; if (stack.at(-1)?.name !== "settings") nav.push({ name: "settings" }); }); // 按「升級」但還沒登入：帶使用者到設定頁的帳號區
   useLayoutEffect(() => {
     document.body.dataset.view = S.view;
     if (S.busy) document.body.dataset.busy = "";

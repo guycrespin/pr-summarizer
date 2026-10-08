@@ -39,6 +39,9 @@ export const S = {
   providers: {} as Partial<Record<ProviderId, ProviderConf>>, // 各供應商的金鑰、base URL、模型；見 providers.ts
   me: null as Me | null, // GET /v1/me（只有 cloud）：方案與本月點數；null＝還沒抓到（或抓失敗）
   meError: false,
+  loginPrompt: false, // 按了「升級」但還沒登入：要求側邊欄打開設定頁（一次性，App 讀到就清掉）
+  accountBusy: false, // 登入／登出進行中
+  accountMsg: "" as string, // 帳號區的錯誤或提示（i18n key）；空字串＝沒有
   effort: "medium",
   pageChars: 8000, // 讀頁一次最多回傳的字數。中文約 1 字 1 token：整頁維基 5.5 萬字＝5 萬 token，一次摘要就要好幾塊台幣
   suggestOn: false,

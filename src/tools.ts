@@ -9,6 +9,7 @@ import type { Block } from "./history";
 import { displayUrl, isPrivateHost, isPrivateIp, RESEARCH_HOSTS, type Task, type Link } from "./shared";
 import { activeProvider } from "./providers";
 import { t } from "./i18n";
+import { BACKEND } from "./backend";
 
 export async function activeTab() {
   const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
@@ -316,6 +317,8 @@ async function searchWeb(query: string, tab: chrome.tabs.Tab, signal?: AbortSign
     + results.map((r) => `[${addSource(r.url, r.title)}] ${r.title}\n${r.url}${r.snippet ? `\n${r.snippet}` : ""}`).join("\n\n");
 }
 
+// 後端網址（登入流程的網址列會帶 code）不准由 agent 開啟或讀取，免得被網頁誘導去跑登入、讀走 code
+const denyBackend = (u: URL) => { if (u.origin === new URL(BACKEND).origin) throw new Error("這是 Browser Agent 自己的服務網址，不能由 agent 開啟"); };
 // 能不能讀這個網址（規格：saas-v2.md 第 7 節）：跟登記過的來源（搜尋結果、頁面裡的連結）或使用者訊息裡的網址**完全相同**、
 // 或是研究用網站，才直接讀。其他自己組的網址先給使用者看完整網址——網址本身就能把對話內容帶出去（?q=…）。
 // 不放行「整個網站」：使用者正在看的、或訊息裡提到的網站都可能是攻擊者的，網頁可以叫模型讀 /c?d=<記憶>
@@ -324,6 +327,7 @@ async function checkReadUrl(raw: unknown, task: Task, signal?: AbortSignal): Pro
   try { u = new URL(String(raw ?? "")); } catch { throw new Error("網址格式不對"); }
   if (!/^https?:$/.test(u.protocol)) throw new Error("只接受 http(s) 網址");
   if (u.username || u.password) throw new Error("不接受帶帳號密碼的網址");
+  denyBackend(u);
   const typed = task.typedUrls.has(noHash(u.href));
   if (isPrivateHost(u.hostname) && !typed) throw new Error("不能讀本機或內網的網址（使用者自己給的網址除外）");
   if (typed || S.sources.some((x) => noHash(x.url) === noHash(u.href)) || RESEARCH_HOSTS.includes(u.hostname)) return u;
@@ -456,6 +460,7 @@ export async function runTool(name: string, input: Input, tabId: number, task: T
       if (!/^https?:\/\//i.test(input.url)) throw new Error("只接受 http(s) 網址");
       let dest: URL;
       try { dest = new URL(input.url); } catch { throw new Error("網址格式不對"); }
+      denyBackend(dest);
       // 跨網站前往：網址本身就能把資料帶出去（?q=對話內容），不在允許清單就問使用者，卡片上顯示完整網址
       if (!task.origins.has(dest.origin)) {
         if (!(await confirm({ label: dest.hostname, submitting: false, host: dest.hostname, text: t("confirm.navigate"), detail: displayUrl(dest.href) }, signal))) throw new Error(DENIED);

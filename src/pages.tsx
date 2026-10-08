@@ -9,7 +9,7 @@ import { t, LANGS, langPref, setLangPref, currentLang, type Key } from "./i18n";
 import { IconBack, IconChevron, IconErr, IconMore, IconSearch } from "./icons";
 import { Select, type Opt } from "./select";
 import { ANTHROPIC_MODELS, PROVIDERS, PROVIDER_IDS, activeProvider, providerName, cleanBaseURL, baseURL, conf, currentModel, listModels, ready, type ProviderId } from "./providers";
-import { BACKEND } from "./backend";
+import { BACKEND, BackendError, signIn, signOut, type Provider } from "./backend";
 import { cloudModels, cloudReadLevels } from "./cloud-models";
 
 export type Route =
@@ -289,7 +289,49 @@ export function SettingsPage({ nav }: { nav: Nav }) {
 }
 
 // 升級網址帶後端的簽章：側邊欄開著很久時手上的 /v1/me 可能是舊的（例如後端換了簽章金鑰），每次都先重抓再開
-export const openUpgrade = async () => { await refreshMe(); chrome.tabs.create({ url: S.me?.upgrade_url ?? `${BACKEND}/upgrade` }); };
+// 付費前必須登入（契約 accounts.md）：還沒登入就改成請使用者先登入，設定頁會自動打開，登入成功後才開升級頁
+let upgradeAfterLogin = false;
+const openUpgradePage = () => chrome.tabs.create({ url: S.me?.upgrade_url ?? `${BACKEND}/upgrade` });
+export const openUpgrade = async () => {
+  await refreshMe();
+  if (S.mode === "cloud" && S.me && !S.me.account) { upgradeAfterLogin = true; S.loginPrompt = true; S.accountMsg = "account.loginFirst"; emit(); return; }
+  openUpgradePage();
+};
+
+const PROVIDER_NAME: Record<Provider, string> = { google: "Google", github: "GitHub" };
+const ACCOUNT_ERRORS = ["account_conflict", "already_signed_in", "invalid_code", "provider_error"];
+// 登入／登出：任務進行中、或另一個登入還沒結束時不動（中途換帳號會讓進行中的任務對不上）
+async function accountAction(run: () => Promise<boolean | void>) {
+  if (S.busy || S.accountBusy) return;
+  S.accountBusy = true; S.accountMsg = ""; emit();
+  let ok = false;
+  try {
+    ok = (await run()) !== false;
+    if (ok) await refreshMe();
+  } catch (e) {
+    const code = e instanceof BackendError ? e.code : undefined;
+    S.accountMsg = code && ACCOUNT_ERRORS.includes(code) ? `account.err.${code}` : "account.err.other";
+  }
+  S.accountBusy = false;
+  const upgrade = upgradeAfterLogin && ok && !!S.me?.account;
+  upgradeAfterLogin = false; // 登入失敗或取消：這次不開升級頁
+  if (ok) S.accountMsg = "";
+  emit();
+  if (upgrade) openUpgradePage();
+}
+const login = (p: Provider) => accountAction(() => signIn(p));
+const logout = () => accountAction(signOut);
+
+function SignedOut() {
+  const off = S.busy || S.accountBusy;
+  return (
+    <div className="list-row account-row">
+      <span className="row-text">{t("account.signInHint")}</span>
+      <button type="button" className="btn btn-ghost" id="account-google" disabled={off} onClick={() => login("google")}>{t("account.google")}</button>
+      <button type="button" className="btn btn-ghost" id="account-github" disabled={off} onClick={() => login("github")}>{t("account.github")}</button>
+    </div>
+  );
+}
 
 function AccountSection() {
   // byok：用自己的 Key，不扣點數；這個模式下完全不碰我們的後端，所以沒有方案與點數可以顯示
@@ -315,10 +357,17 @@ function AccountSection() {
         <div className="list-row account-row">
           <span className="row-text">
             <span id="account-plan"><strong>{me ? t(`plan.${me.plan}` as Key) : "…"}</strong></span>
-            <small>{t("account.anon")}</small>
+            {!me?.account && <small>{t("account.anon")}</small>}
           </span>
           <button type="button" className="btn btn-primary" id="account-upgrade" onClick={openUpgrade}>{t("account.upgrade")}</button>
         </div>
+        {me && (me.account ? (
+          <div className="list-row account-row">
+            <span className="row-text" id="account-user">{me.account.email ? t("account.signedIn", { who: me.account.email, provider: PROVIDER_NAME[me.account.provider] }) : t("account.signedInNoEmail", { provider: PROVIDER_NAME[me.account.provider] })}</span>
+            <button type="button" className="btn btn-ghost" id="account-logout" disabled={S.busy || S.accountBusy} onClick={logout}>{t("account.signOut")}</button>
+          </div>
+        ) : <SignedOut />)}
+        {S.accountMsg && <div className="notice" id="account-msg" role="alert">{t(S.accountMsg as Key)}</div>}
         {me ? (
           <div className="list-row account-credits">
             <span className="row-text">

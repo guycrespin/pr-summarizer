@@ -7,21 +7,23 @@ export const BACKEND = (typeof BA_BACKEND !== "undefined" ? BA_BACKEND : "http:/
 export type Me = {
   user_id: string; plan: string; credits_used: number; credits_limit: number;
   period_end: string; kol_code: string | null; upgrade_url: string;
+  account?: { provider: Provider; email: string | null } | null; // 登入的帳號；null＝匿名（舊版後端沒有）
   models?: CloudModel[]; default_model?: string; // cloud 的模型選單來源（舊版後端沒有）
   read_levels?: ReadLevel[]; default_read_chars?: number; // cloud 的讀頁字數檔位（舊版後端沒有）
 };
 
+export type Provider = "google" | "github";
 const TOKEN_KEY = "deviceToken";
 const USER_KEY = "userId";
 const read = async () => (await chrome.storage.local.get([TOKEN_KEY, USER_KEY])) as { deviceToken?: string; userId?: string };
 
 export class BackendError extends Error {
-  constructor(message: string, public status?: number) { super(message); }
+  constructor(message: string, public status?: number, public code?: string) { super(message); }
 }
 
 async function register(): Promise<{ token: string; userId: string }> {
   const res = await fetch(`${BACKEND}/v1/devices`, {
-    method: "POST", headers: { "content-type": "application/json" },
+    method: "POST", headers: { "content-type": "application/json" }, credentials: "include", // 後端靠 __Host-ba_bid cookie 認回重裝的同一個瀏覽器；只有這支與 /v1/auth/link 帶 cookie
     body: JSON.stringify({ locale: navigator.language, version: chrome.runtime.getManifest().version }),
   });
   if (!res.ok) throw new BackendError(`HTTP ${res.status}`, res.status);
@@ -66,4 +68,42 @@ export async function fetchMe(): Promise<Me> {
   const res = await authFetch(`${BACKEND}/v1/me`);
   if (!res.ok) throw new BackendError(`HTTP ${res.status}`, res.status);
   return res.json();
+}
+
+// 後端錯誤格式 {"type":"error","error":{"type":"account_conflict","message":"…"}}
+async function failure(res: Response): Promise<BackendError> {
+  const code = (await res.json().catch(() => null))?.error?.type;
+  return new BackendError(`HTTP ${res.status}`, res.status, code);
+}
+
+// Google／GitHub 登入（契約 .claude/notes/accounts.md）：回 false＝使用者自己取消（關掉視窗或在供應商頁按拒絕），不是錯誤
+export async function signIn(provider: Provider): Promise<boolean> {
+  await ensureDevice(); // link 要用 device token；先確保有，免得登入完才發現要註冊
+  let url: string | undefined;
+  try {
+    url = await chrome.identity.launchWebAuthFlow({ url: `${BACKEND}/auth/start?provider=${provider}&redirect=${encodeURIComponent(chrome.identity.getRedirectURL())}`, interactive: true });
+  } catch { return false; }
+  if (!url) return false;
+  const q = new URL(url).searchParams;
+  const err = q.get("error");
+  if (err === "access_denied") return false;
+  if (err) throw new BackendError(err, undefined, err);
+  const code = q.get("code");
+  if (!code) throw new BackendError("no code", undefined, "invalid_code");
+  const res = await authFetch(`${BACKEND}/v1/auth/link`, {
+    method: "POST", headers: { "content-type": "application/json" }, credentials: "include", // 後端要讀 __Host-ba_auth
+    body: JSON.stringify({ code }),
+  });
+  if (!res.ok) throw await failure(res);
+  return true;
+}
+
+// 登出：這台裝置的 token 在後端被撤銷，清掉後重新註冊，會拿到新的匿名帳號
+export async function signOut(): Promise<void> {
+  const res = await authFetch(`${BACKEND}/v1/auth/logout`, { method: "POST" });
+  if (!res.ok) throw await failure(res);
+  await navigator.locks.request("ba-register", async () => {
+    await chrome.storage.local.remove([TOKEN_KEY, USER_KEY]);
+    await register();
+  });
 }
