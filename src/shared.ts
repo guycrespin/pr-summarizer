@@ -75,6 +75,11 @@ export const tools: BetaTool[] = [
     },
   },
   {
+    name: "screenshot",
+    description: "截取目前分頁可見範圍的畫面（圖片，每張約 1,500 token，比讀文字貴）。用在 read_page 讀不到的視覺內容：canvas／WebGL（例如 three.js）、圖表、圖片、版面與樣式問題。只截得到畫面上看得到的部分，要看別處先 scroll；分頁不在前景時截不到。文字內容用 read_page 讀就好，不要用截圖讀字。",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
     name: "use_skill",
     description: "載入某個技能的完整指示。系統提示詞的「可用技能」清單裡有適合這次任務的技能時，先呼叫它再照指示做。",
     input_schema: { type: "object", properties: { name: { type: "string", description: "技能名稱" } }, required: ["name"] },

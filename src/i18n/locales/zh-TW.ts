@@ -237,6 +237,7 @@ const zhTW: Dict = {
   "tool.click": "點擊頁面元素",
   "tool.type": "輸入「{text}」",
   "tool.scroll": "捲動頁面",
+  "tool.screenshot": "截取畫面",
   "tool.remember": "記下一條記憶",
   "tool.forget": "刪除一條記憶",
   "tool.use_skill": "載入技能 {name}",

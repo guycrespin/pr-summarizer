@@ -237,6 +237,7 @@ const de: Dict = {
   "tool.click": "Element anklicken",
   "tool.type": "„{text}“ eingeben",
   "tool.scroll": "Seite scrollen",
+  "tool.screenshot": "Screenshot aufnehmen",
   "tool.remember": "Eintrag speichern",
   "tool.forget": "Eintrag vergessen",
   "tool.use_skill": "Skill {name} laden",

@@ -227,6 +227,7 @@ const th: Dict = {
   "tool.click": "คลิกองค์ประกอบ",
   "tool.type": "พิมพ์ “{text}”",
   "tool.scroll": "เลื่อนหน้าเว็บ",
+  "tool.screenshot": "จับภาพหน้าจอ",
   "tool.remember": "บันทึกความทรงจำ",
   "tool.forget": "ลืมความทรงจำ",
   "tool.use_skill": "โหลดสกิล {name}",

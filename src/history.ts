@@ -27,12 +27,13 @@ export function selectionOf(content: Message["content"]): string | null {
   return typeof content === "string" ? content.match(SEL_RE)?.[2] ?? null : null;
 }
 
-// 存進歷史前把掃描 PDF 的原檔（base64，可能好幾 MB）換成一句說明：storage.local 只有 10 MB。還原後接著聊也送得出去
+// 存進歷史前把掃描 PDF 的原檔、截圖（base64，可能好幾 MB）換成一句說明：storage.local 只有 10 MB。還原後接著聊也送得出去
 export function stripDocuments(messages: Message[]): Message[] {
-  const doc = (b: any) => b?.type === "document" && b.source?.type === "base64";
+  const doc = (b: any) => (b?.type === "document" || b?.type === "image") && b.source?.type === "base64";
+  const note = (b: any) => ({ type: "text", text: b.type === "image" ? "（截圖沒有存進歷史；需要時重新 screenshot）" : "（掃描 PDF 的原檔沒有存進歷史；需要時重新 read_page）" });
   return messages.map((m) => (typeof m.content === "string" || !m.content.some((b) => Array.isArray(b.content) && b.content.some(doc)) ? m : {
     ...m,
-    content: m.content.map((b) => (Array.isArray(b.content) ? { ...b, content: b.content.map((x: any) => (doc(x) ? { type: "text", text: "（掃描 PDF 的原檔沒有存進歷史；需要時重新 read_page）" } : x)) } : b)),
+    content: m.content.map((b) => (Array.isArray(b.content) ? { ...b, content: b.content.map((x: any) => (doc(x) ? note(x) : x)) } : b)),
   }));
 }
 

@@ -237,6 +237,7 @@ const ptBR: Dict = {
   "tool.click": "Clicar em um elemento",
   "tool.type": "Digitar “{text}”",
   "tool.scroll": "Rolar a página",
+  "tool.screenshot": "Capturar a tela",
   "tool.remember": "Salvar uma memória",
   "tool.forget": "Esquecer uma memória",
   "tool.use_skill": "Carregar a skill {name}",

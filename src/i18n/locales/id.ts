@@ -227,6 +227,7 @@ const id: Dict = {
   "tool.click": "Klik sebuah elemen",
   "tool.type": "Ketik “{text}”",
   "tool.scroll": "Gulir halaman",
+  "tool.screenshot": "Ambil tangkapan layar",
   "tool.remember": "Simpan memori",
   "tool.forget": "Lupakan memori",
   "tool.use_skill": "Muat skill {name}",

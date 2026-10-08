@@ -227,6 +227,7 @@ const vi: Dict = {
   "tool.click": "Nhấp vào một phần tử",
   "tool.type": "Nhập “{text}”",
   "tool.scroll": "Cuộn trang",
+  "tool.screenshot": "Chụp màn hình",
   "tool.remember": "Lưu một ghi nhớ",
   "tool.forget": "Quên một ghi nhớ",
   "tool.use_skill": "Tải kỹ năng {name}",

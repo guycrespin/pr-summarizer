@@ -227,6 +227,7 @@ const ja: Dict = {
   "tool.click": "要素をクリック",
   "tool.type": "「{text}」と入力",
   "tool.scroll": "ページをスクロール",
+  "tool.screenshot": "画面をキャプチャ",
   "tool.remember": "メモリを保存",
   "tool.forget": "メモリを削除",
   "tool.use_skill": "スキル{name}を読み込む",

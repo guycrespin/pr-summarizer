@@ -202,11 +202,12 @@ async function runApi(userText: string, typed: string | null, stats: Stats, sign
   S.messages.push({ role: "user", content: userText });
   // 系統提示詞與工具在這一輪固定：中途 remember 寫入不會改到它，否則快取整段失效，模型也會以為「早就記得」
   const system = systemPrompt(langEnglishName()) + skillsPrompt(S.skills) + (S.memoryOn ? memoryPrompt(S.memories) : "");
-  const turnTools = S.memoryOn ? tools : tools.filter((x) => !MEMORY_TOOLS.includes(x.name));
+  // 截圖只給 Anthropic：OpenAI 相容的 tool 訊息只收文字，圖會被丟掉
+  const turnTools = tools.filter((x) => (S.memoryOn || !MEMORY_TOOLS.includes(x.name)) && (provider === "anthropic" || x.name !== "screenshot"));
   const startTab = await activeTab();
   const tabId = startTab.id!;
   // 這則對話裡已經有網頁來的內容（之前讀過頁面、這則或之前附了選取文字）＝一開始就算不可信
-  const tainted = typed === null || S.messages.some((m) => (typeof m.content === "string" ? m.content.includes("\n<page_selection chars=") : m.content.some((b) => b.type === "tool_use" && ["read_page", "navigate", "search_web", "read_url"].includes(b.name!))));
+  const tainted = typed === null || S.messages.some((m) => (typeof m.content === "string" ? m.content.includes("\n<page_selection chars=") : m.content.some((b) => b.type === "tool_use" && ["read_page", "navigate", "search_web", "read_url", "screenshot"].includes(b.name!))));
   const task = newTask(startTab.url, typed ?? "", tainted, cloud ? readLimit : undefined); // cloud：任務開始時釘住；byok 照舊即時讀 S.pageChars
   if (!task.question) task.question = userText.slice(0, 500); // 首頁建議：沒有使用者打的字，用建議的提示詞
   if (provider === "anthropic" && S.summarizePages) task.summarize = summarizer(cloud, () => (cloud ? baHeaders("task", session, usage, readLimit) : undefined), stats);

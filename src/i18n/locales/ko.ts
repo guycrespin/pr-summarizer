@@ -227,6 +227,7 @@ const ko: Dict = {
   "tool.click": "요소 클릭",
   "tool.type": "“{text}” 입력",
   "tool.scroll": "페이지 스크롤",
+  "tool.screenshot": "화면 캡처",
   "tool.remember": "메모리 저장",
   "tool.forget": "메모리 삭제",
   "tool.use_skill": "{name} 스킬 불러오기",

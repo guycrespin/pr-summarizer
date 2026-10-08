@@ -147,7 +147,7 @@ function toolLabel(item: ToolItem) {
     case "use_skill": return t("tool.use_skill", { name: String(i.name ?? "") });
     case "create_file": return t("tool.create_file", { name: String(i.filename ?? "") });
     case "ask_user": return t("tool.ask_user");
-    case "read_page": case "click": case "scroll": case "remember": case "forget": return t(`tool.${item.name}` as Key);
+    case "read_page": case "click": case "scroll": case "screenshot": case "remember": case "forget": return t(`tool.${item.name}` as Key);
     default: return item.name;
   }
 }

@@ -237,6 +237,7 @@ const tr: Dict = {
   "tool.click": "Bir öğeye tıkla",
   "tool.type": "“{text}” yaz",
   "tool.scroll": "Sayfayı kaydır",
+  "tool.screenshot": "Ekran görüntüsü al",
   "tool.remember": "Bir anı kaydet",
   "tool.forget": "Bir anıyı unut",
   "tool.use_skill": "{name} becerisini yükle",

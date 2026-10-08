@@ -237,6 +237,7 @@ const it: Dict = {
   "tool.click": "Clicca su un elemento",
   "tool.type": "Digita “{text}”",
   "tool.scroll": "Scorri la pagina",
+  "tool.screenshot": "Acquisisci uno screenshot",
   "tool.remember": "Salva un ricordo",
   "tool.forget": "Dimentica un ricordo",
   "tool.use_skill": "Carica la skill {name}",

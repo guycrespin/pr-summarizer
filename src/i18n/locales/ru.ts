@@ -237,6 +237,7 @@ const ru: Dict = {
   "tool.click": "Клик по элементу",
   "tool.type": "Ввод «{text}»",
   "tool.scroll": "Прокрутка страницы",
+  "tool.screenshot": "Сделать снимок экрана",
   "tool.remember": "Сохранить запись в памяти",
   "tool.forget": "Удалить запись из памяти",
   "tool.use_skill": "Загрузить навык {name}",

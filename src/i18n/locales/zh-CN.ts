@@ -227,6 +227,7 @@ const zhCN: Dict = {
   "tool.click": "点击一个元素",
   "tool.type": "输入“{text}”",
   "tool.scroll": "滚动页面",
+  "tool.screenshot": "截取画面",
   "tool.remember": "保存一条记忆",
   "tool.forget": "忘记一条记忆",
   "tool.use_skill": "加载技能 {name}",

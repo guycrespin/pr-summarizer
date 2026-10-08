@@ -364,6 +364,10 @@ const ALL_DICTS = {
   assert.equal(stripped[0].content[0].content[0].text, "掃描檔");
   assert.equal(stripped[1], msgs[0]);
   assert.ok(JSON.stringify(docMsgs).includes("QUJD"), "不改到原本的訊息");
+  // 截圖也不存進歷史
+  const shotMsgs = [{ role: "user", content: [{ type: "tool_result", tool_use_id: "y", content: [{ type: "text", text: "截圖" }, { type: "image", source: { type: "base64", media_type: "image/jpeg", data: "WFla" } }] }] }];
+  const shotStripped = JSON.stringify(stripDocuments(shotMsgs));
+  assert.ok(!shotStripped.includes("WFla") && shotStripped.includes("截圖沒有存進歷史"));
   assert.ok(!md.includes("<skill"), "匯出不含展開的技能指示");
   let chats = [];
   for (let i = 0; i < MAX_CHATS + 5; i++) chats = upsertChat(chats, { id: String(i) });

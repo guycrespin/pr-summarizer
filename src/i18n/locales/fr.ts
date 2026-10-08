@@ -237,6 +237,7 @@ const fr: Dict = {
   "tool.click": "Cliquer sur un élément",
   "tool.type": "Saisir « {text} »",
   "tool.scroll": "Faire défiler la page",
+  "tool.screenshot": "Faire une capture d’écran",
   "tool.remember": "Enregistrer un souvenir",
   "tool.forget": "Oublier un souvenir",
   "tool.use_skill": "Charger la compétence {name}",

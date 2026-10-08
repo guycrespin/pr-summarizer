@@ -238,6 +238,7 @@ const en = {
   "tool.click": "Click an element",
   "tool.type": "Type “{text}”",
   "tool.scroll": "Scroll the page",
+  "tool.screenshot": "Take a screenshot",
   "tool.remember": "Save a memory",
   "tool.forget": "Forget a memory",
   "tool.use_skill": "Load skill {name}",

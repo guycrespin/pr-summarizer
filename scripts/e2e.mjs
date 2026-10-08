@@ -1168,6 +1168,32 @@ try {
   assert.ok(!saved.includes(doc.source.data), "掃描檔原檔不存進歷史");
   await test.goto(`http://127.0.0.1:${PORT}/`);
 
+  // 截圖：截任務分頁的可見範圍（測試頁蓋一層紅，證明截到的是它、不是側邊欄），縮過轉 JPEG 當 image block 送出；不存進歷史
+  await test.evaluate(() => { const d = document.createElement("div"); d.id = "red"; d.style.cssText = "position:fixed;inset:0;z-index:99999;background:#f00"; document.body.append(d); });
+  // 側邊欄（同一個視窗的另一個分頁）在前景＝任務分頁看不到：不截，否則截到的是別的分頁
+  await run("截圖", [{ type: "tool_use", id: "shot0", name: "screenshot", input: {} }]);
+  await idle();
+  assert.match(lastResult(), /^ERR:任務的分頁現在不在前景/);
+  await test.bringToFront();
+  await run("截圖", [{ type: "tool_use", id: "shot1", name: "screenshot", input: {} }]);
+  await idle();
+  await panel.bringToFront();
+  const shotResult = reqs.at(-1).messages.at(-1).content.find((c) => c.type === "tool_result");
+  console.log("screenshot:", shotResult.is_error ? `ERR:${shotResult.content}` : shotResult.content[0].text.replace(/\n/g, " ⏎ "));
+  const img = Array.isArray(shotResult.content) && shotResult.content.find((c) => c.type === "image");
+  assert.equal(img?.source?.media_type, "image/jpeg", "tool_result 帶 JPEG image block");
+  const [w, h] = shotResult.content[0].text.match(/（(\d+)×(\d+)/).slice(1).map(Number);
+  assert.ok(w > 0 && Math.max(w, h) <= 1568 && w * h <= 1_150_000, `截圖大小 ${w}×${h}`);
+  const center = await panel.evaluate(async (b64) => {
+    const bmp = await createImageBitmap(await (await fetch(`data:image/jpeg;base64,${b64}`)).blob());
+    const c = new OffscreenCanvas(bmp.width, bmp.height); const g = c.getContext("2d"); g.drawImage(bmp, 0, 0);
+    return [...g.getImageData(bmp.width >> 1, bmp.height >> 1, 1, 1).data.slice(0, 3)];
+  }, img.source.data);
+  assert.ok(center[0] > 200 && center[1] < 60 && center[2] < 60, `截到的是測試頁（中心點 ${center}）`);
+  const savedShot = JSON.stringify((await panel.evaluate(async () => (await chrome.storage.local.get("chats")).chats))[0]);
+  assert.ok(!savedShot.includes(img.source.data) && savedShot.includes("截圖沒有存進歷史"), "截圖不存進歷史");
+  await test.evaluate(() => document.getElementById("red").remove());
+
   // ---------- 研究：search_web 在背景分頁開 Google、read_url 在背景分頁讀網頁（同一輪並行）、Haiku 依問題整理、來源 [n] ----------
   // 外面的網站是本機的假網站（webSrv：Google 結果頁、兩篇文章、攻擊者網站）。背景分頁讀完要關掉，使用者的分頁不動
   web.reqs.length = 0;
