@@ -148,7 +148,11 @@ async function screens() {
     const panel = await ctx.newPage(); await panel.setViewportSize({ width: PANEL_W, height: PANEL_H });
     await panel.addInitScript(() => { const q = chrome.tabs.query.bind(chrome.tabs); chrome.tabs.query = () => q({ url: "https://*.example/*" }); });
     await panel.goto(`chrome-extension://${id}/sidepanel.html`);
-    await panel.evaluate(() => chrome.storage.local.set({ consent: true, key: "sk-ant-demo", model: "claude-sonnet-5", suggestOn: false, lang: "en", memories: [] }));
+    // 側邊欄第一次以空的 storage 啟動＝全新安裝＝cloud，init 最後（載完語言字典後）才把 mode: cloud 寫進 storage。
+    // 一定要等它啟動完（body[data-view] 出現）再寫種子，而且種子要明寫 mode: byok：否則 cloud 會蓋掉種子，
+    // 後面全部走真的後端（不是下面攔截的假 Anthropic 回應）
+    await panel.waitForSelector("body[data-view]");
+    await panel.evaluate(() => chrome.storage.local.set({ consent: true, mode: "byok", key: "sk-ant-demo", model: "claude-sonnet-5", suggestOn: false, lang: "en", memories: [] }));
     for (const sc of SCENES) {
       await page.goto(sc.url);
       await panel.reload();
@@ -156,6 +160,7 @@ async function screens() {
       if (sc.slash) await panel.locator("#input").pressSequentially("/");
       else { await panel.fill("#input", sc.prompt); await panel.click("#send"); }
       await panel.locator(sc.wait).first().waitFor({ state: "visible", timeout: 15000 });
+      if (!sc.slash && !calls) throw new Error(`${sc.name}: 假的 Anthropic 回應一次都沒被呼叫，側邊欄不是 byok 模式（拍到的會是真後端的回答）`);
       await panel.waitForTimeout(600);
       await panel.evaluate(() => { const l = document.querySelector("#log"); l?.scrollTo?.(0, l.scrollHeight); });
       await panel.waitForTimeout(300);
