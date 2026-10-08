@@ -218,27 +218,35 @@ function pageMain(linkLimit: number) {
   return { text: text.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim(), links, url: location.href, title: document.title };
 }
 
-// 在 Google 搜尋結果頁裡跑：每筆結果的標題、網址、摘要；blocked＝機器人驗證頁。ponytail: 只支援 Google，Google 改版就要改這裡
+// 在搜尋結果頁裡跑（Google 或 Bing）：每筆結果的標題、網址、摘要；blocked＝機器人驗證頁。
+// ponytail: 只認 Google 與 Bing 的版面，改版就要改這裡
 function serp(limit: number) {
+  const bing = /(^|\.)bing\./.test(location.hostname);
   const out: { title: string; url: string; snippet: string }[] = [];
-  const heads = [...document.querySelectorAll("#rso a h3")];
-  for (const h3 of heads.length ? heads : [...document.querySelectorAll("#search a h3, #main a h3")]) {
+  // [連結, 標題元素]：Google 的標題是連結裡的 h3（連結裡還有網站名稱），Bing 的標題就是 h2 裡的連結
+  const heads = [...document.querySelectorAll<HTMLElement>(bing ? "#b_results .b_algo h2 a" : "#rso a h3")];
+  const titles = heads.length || bing ? heads : [...document.querySelectorAll<HTMLElement>("#search a h3, #main a h3")];
+  const one = bing ? "h2 a" : "a h3"; // 一筆結果裡只會有一個
+  for (const t of titles) {
     if (out.length >= limit) break;
-    const a = h3.closest("a")!;
+    const a = t.closest("a")!;
     let url: URL;
     try {
       url = new URL(a.href);
-      if (url.pathname === "/url" && url.searchParams.get("q")) url = new URL(url.searchParams.get("q")!);
+      if (url.pathname === "/url" && url.searchParams.get("q")) url = new URL(url.searchParams.get("q")!); // Google 的轉址
+      const u = url.searchParams.get("u");
+      if (bing && url.pathname.startsWith("/ck/") && u?.startsWith("a1")) url = new URL(atob(u.slice(2).replace(/-/g, "+").replace(/_/g, "/"))); // Bing 的轉址：u＝a1＋網址的 base64url
     } catch { continue; }
-    if (!/^https?:$/.test(url.protocol) || /(^|\.)google\.[a-z.]+$/.test(url.hostname) || out.some((r) => r.url === url.href)) continue;
+    if (!/^https?:$/.test(url.protocol) || /(^|\.)(google|bing)\.[a-z.]+$/.test(url.hostname) || out.some((r) => r.url === url.href)) continue;
     // 往上找到只包含這一筆結果的最大區塊，裡面除了標題、網址那幾行就是摘要
     let box: HTMLElement = a;
-    while (box.parentElement && box.parentElement !== document.body && box.parentElement.querySelectorAll("a h3").length === 1) box = box.parentElement;
-    const title = (h3.textContent ?? "").trim();
+    while (box.parentElement && box.parentElement !== document.body && box.parentElement.querySelectorAll(one).length === 1) box = box.parentElement;
+    const title = (t.textContent ?? "").trim();
     const snippet = box.innerText.split("\n").map((l) => l.trim()).filter((l) => l.length > 25 && l !== title && !/^https?:\/\/|›/.test(l)).join(" ");
     out.push({ title: title.slice(0, 150), url: url.href, snippet: snippet.slice(0, 300) });
   }
-  return { results: out, blocked: location.pathname.startsWith("/sorry") || !!document.querySelector("#captcha-form, form[action*='sorry'], iframe[src*='recaptcha']") };
+  const challenge = location.pathname.startsWith("/sorry") || !!document.querySelector("#captcha-form, form[action*='sorry'], iframe[src*='recaptcha'], iframe[src*='captcha'], iframe[src*='challenges']");
+  return { results: out, blocked: challenge && !out.length };
 }
 
 // 研究用的背景分頁：開在任務分頁的視窗、不切過去；fn 跑完、出錯或使用者按停止都會關掉。
@@ -268,6 +276,7 @@ async function inBackground<R>(url: string, windowId: number, signal: AbortSigna
 }
 
 declare const BA_SEARCH: string; // esbuild define（scripts/build.mjs）：搜尋網址，後面直接接關鍵字
+declare const BA_SEARCH_FALLBACK: string; // 主要的搜尋引擎要求驗證時改用的（預設 Bing）
 declare const BA_TEST_PUBLIC_IP: string; // esbuild define：e2e 的假網站都在 127.0.0.1，測試版把它當公開 IP；正式版是空字串
 const noHash = (url: string) => url.split("#")[0];
 // 登記一個來源，回傳編號 [n]（同一個網址只登記一次）
@@ -284,7 +293,10 @@ async function searchWeb(query: string, tab: chrome.tabs.Tab, signal?: AbortSign
   const results = await inBackground(`${BA_SEARCH}${encodeURIComponent(q)}`, tab.windowId, signal, async (id) => {
     let got = await inPage(id, serp, [8]);
     if (!got?.blocked) return got?.results ?? [];
-    // 機器人驗證：分頁切到前景請使用者處理，通過後再讀（最多等 3 分鐘），讀完切回任務的分頁
+    // 要求驗證（同一個 IP 搜太多次 Google 就會這樣）：先改用備用的搜尋引擎，使用者不用做任何事
+    const other = await inBackground(`${BA_SEARCH_FALLBACK}${encodeURIComponent(q)}`, tab.windowId, signal, (id2) => inPage(id2, serp, [8])).catch(() => null);
+    if (other && !other.blocked && other.results.length) return other.results;
+    // 備用的也不行：原本的分頁切到前景請使用者處理驗證，通過後再讀（最多等 3 分鐘），讀完切回任務的分頁
     await chrome.tabs.update(id, { active: true });
     addItem<NoteItem>({ kind: "note", text: t("research.captcha") });
     for (let i = 0; i < 180 && got?.blocked !== false; i++) {

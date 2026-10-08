@@ -146,19 +146,27 @@ const ATTACK = `http://127.0.0.1:${ATTACK_PORT}`;
 // 研究功能要讀的「外面的網站」：Chromium 用 --host-resolver-rules 把這些網域指到本機這台（照 Host 標頭分）。
 // 不用 ctx.route：擴充功能用 chrome.tabs.create 開的背景分頁，第一個請求 playwright 攔不到（會真的連出去）
 const WEB_PORT = 9395 + PORT_SHIFT;
-const WEB_HOSTS = ["www.google.test", "docs.example.org", "blog.example.net", "ref.example.org", "evil.example.com"];
+const WEB_HOSTS = ["www.google.test", "www.bing.test", "docs.example.org", "blog.example.net", "ref.example.org", "evil.example.com"];
 const REBIND_HOST = "rebind.example.com"; // 公開網域、DNS 卻指到本機（[::1]）：測試版只把 127.0.0.1 當公開 IP
 const SERP = (q) => `<!doctype html><meta charset=utf-8><title>${q} - Google</title><div id=rso>
   <div class=g><a href="http://docs.example.org/a"><h3>React 狀態管理比較</h3></a><cite>http://docs.example.org › a</cite><div>Zustand、Jotai 與 Redux Toolkit 在 2026 年的下載量與活躍度比較整理。</div></div>
   <div class=g><a href="/url?q=http://blog.example.net/b&amp;sa=U"><h3>我們為什麼換掉 Redux</h3></a><div>團隊從 Redux 換到 Zustand 之後，樣板程式碼少了一半的經驗分享。</div></div>
   <div class=g><a href="http://www.google.test/search?q=related"><h3>相關搜尋</h3></a></div></div>`;
 const ARTICLE = (title, body, links = "") => `<!doctype html><meta charset=utf-8><title>${title}</title><nav><a href="http://docs.example.org/nav">導覽連結</a></nav><article><h1>${title}</h1><p>${body}</p>${links}</article>`;
-const web = { reqs: [], googleBlocked: false, parallelSeen: null, blogArrived: () => {}, blogHere: null }; // reqs：GET 的完整網址
+// Bing 的結果連結是轉址：/ck/a?…&u=a1＋網址的 base64url
+const bingLink = (url) => `http://www.bing.test/ck/a?!&&p=x&u=a1${Buffer.from(url).toString("base64url")}&ntb=1`;
+const BING_SERP = (q) => `<!doctype html><meta charset=utf-8><title>${q} - 搜尋</title><ol id=b_results>
+  <li class=b_algo><h2><a href="${bingLink("http://docs.example.org/a")}">React 狀態管理比較</a></h2><div class=b_caption><p>Zustand、Jotai 與 Redux Toolkit 在 2026 年的下載量與活躍度比較整理（Bing）。</p></div></li>
+  <li class=b_algo><h2><a href="${bingLink("http://blog.example.net/b")}">我們為什麼換掉 Redux</a></h2><div class=b_caption><p>團隊從 Redux 換到 Zustand 之後，樣板程式碼少了一半的經驗分享（Bing）。</p></div></li></ol>`;
+const web = { reqs: [], googleBlocked: false, bingBlocked: false, parallelSeen: null, blogArrived: () => {}, blogHere: null }; // reqs：GET 的完整網址
 const webHandler = async (q, r) => {
   const url = `http://${q.headers.host}${q.url}`;
   const html = (h) => { r.setHeader("content-type", "text/html; charset=utf-8"); r.end(h); };
   if (q.method !== "GET") return html(""); // isPdfUrl 的 HEAD
   web.reqs.push(url);
+  if (url.startsWith("http://www.bing.test/search")) {
+    return html(web.bingBlocked ? "<!doctype html><title>Bing</title><iframe src='http://www.bing.test/captcha'></iframe>" : BING_SERP(new URL(url).searchParams.get("q")));
+  }
   if (url.startsWith("http://www.google.test/search")) {
     const term = new URL(url).searchParams.get("q");
     return html(web.googleBlocked && term !== "solved" ? "<!doctype html><title>Sorry</title><form id=captcha-form>請證明你不是機器人</form>" : SERP(term));
@@ -1178,7 +1186,7 @@ try {
   };
   await ctx.route(`${BACKEND}/v1/messages**`, researchRoute);
   const resultsOf = (i) => reqs[i].messages.at(-1).content.filter((c) => c.type === "tool_result").map((c) => (c.is_error ? "ERR:" : "") + c.content);
-  const bgTabs = () => ctx.pages().filter((p) => /google\.test|example\.(org|net|com)/.test(p.url())).length;
+  const bgTabs = () => ctx.pages().filter((p) => /google\.test|bing\.test|example\.(org|net|com)/.test(p.url())).length;
   await run("研究 React 狀態管理，推薦一個", [
     { type: "tool_use", id: "r1", name: "search_web", input: { query: "React 狀態管理 2026" } },
     [{ type: "tool_use", id: "r2", name: "read_url", input: { url: "http://docs.example.org/a", focus: "下載量" } },
@@ -1243,8 +1251,18 @@ try {
   assert.match(lastResult(), /^\[1\] 我們為什麼換掉 Redux\nhttp:\/\/blog\.example\.net\/b\n（頁面原文；[^\n]*）\n\n[\s\S]*換到 Zustand 之後樣板少了一半/, "新對話重新編號；整理失敗給原文");
   haikuFail = false;
 
-  // 搜尋引擎要求驗證：分頁切到前景、提示使用者；通過後自動讀結果，切回任務的分頁
+  // Google 要求驗證：先自動改用 Bing（不打擾使用者、分頁不切過去），Bing 的轉址換成真網址
   web.googleBlocked = true;
+  web.reqs.length = 0;
+  await run("搜尋一下", [{ type: "tool_use", id: "b1", name: "search_web", input: { query: "改用備用" } }]);
+  await idle();
+  assert.match(lastResult(), /\[1\] React 狀態管理比較\nhttp:\/\/docs\.example\.org\/a\n.*（Bing）/, "Google 被擋 → 用 Bing 的結果");
+  assert.ok(web.reqs.some((u) => u.startsWith("http://www.bing.test/search")), "有打 Bing");
+  assert.equal(await panel.locator(".msg.note", { hasText: "機器人" }).count(), 0, "改用 Bing 成功就不用請使用者驗證");
+  await until(() => bgTabs() === 0, "改用 Bing 之後背景分頁沒有關掉");
+
+  // 兩個都要求驗證：Google 的分頁切到前景、提示使用者；通過後自動讀結果，切回任務的分頁
+  web.bingBlocked = true;
   await run("搜尋一下", [{ type: "tool_use", id: "c1", name: "search_web", input: { query: "需要驗證" } }]);
   await until(() => panel.locator(".msg.note", { hasText: "機器人" }).count(), "驗證：沒有提示使用者");
   const activeUrls = () => sw.evaluate(async () => (await chrome.tabs.query({ active: true })).map((t) => t.url));
@@ -1254,7 +1272,7 @@ try {
   assert.match(lastResult(), /\[1\] React 狀態管理比較/, "通過驗證後讀到結果");
   assert.ok((await activeUrls()).includes(`http://127.0.0.1:${PORT}/`), "切回任務的分頁");
   await until(() => bgTabs() === 0, "驗證完的搜尋分頁沒有關掉");
-  web.googleBlocked = false;
+  web.googleBlocked = false; web.bingBlocked = false;
 
   // read_url 的網址規則（推翻式審查抓到的外洩路徑）：使用者提到的網站只認完全相同的網址，不是整個網站——
   // 網頁可以叫模型讀「同一個網站」的 /c?d=<記憶與對話>，背景分頁看不到、也沒有確認卡
@@ -1838,7 +1856,7 @@ try {
   // 介面語言：設定成英文後，首頁標題與輸入框提示都是英文（期望值寫死，不讀 en.ts：字典被改壞要會紅）
   await panel.evaluate(() => chrome.storage.local.set({ lang: "en" }));
   await panel.reload();
-  assert.equal(await panel.locator("#empty h2").textContent(), "What do you want to research?");
+  assert.equal(await panel.locator("#empty h2").textContent(), "What should we do on this page?");
   assert.equal(await panel.locator("#input").getAttribute("placeholder"), "What should I do on this page?");
   assert.equal(await panel.evaluate(() => document.documentElement.lang), "en");
 

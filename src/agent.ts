@@ -60,8 +60,9 @@ let controller: AbortController | null = null; // 按「停止」時中止整個
 
 // 一次任務最多幾輪工具呼叫：模型卡在同一個按鈕反覆點時會一直花錢
 const MAX_STEPS = 40; // ponytail: 固定值，有人需要再搬進設定頁。研究任務要搜尋＋讀十幾頁（伺服器端每個 session 另有呼叫次數上限）
-// 只讀、互不影響的工具：同一輪連續出現時並行跑（每個開一個背景分頁），最多 4 個
-const PARALLEL_TOOLS = ["search_web", "read_url"];
+// 只讀、互不影響的工具：同一輪連續出現時並行跑（每個開一個背景分頁），最多 4 個。
+// search_web 不並行：同時開好幾個搜尋，搜尋引擎很快就會要求驗證
+const PARALLEL_TOOLS = ["read_url"];
 
 type Stats = { steps: number; calls: number; input: number; cached: number; output: number; usd?: number }; // usd：byok 的 Anthropic 才有（估計）
 

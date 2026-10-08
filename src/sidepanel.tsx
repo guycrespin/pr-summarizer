@@ -13,7 +13,7 @@ import { t, currentLang, type Key } from "./i18n";
 import { LogList } from "./log";
 import { HistoryPage, SettingsPage, MemoryPage, SkillsPage, SkillEditorPage, SkillItem, Toast, ModelSelect, CloudModelSelect, type Route, type Nav } from "./pages";
 import {
-  IconGear, IconHistory, IconLines, IconLogo, IconPlus, IconSearch, IconSend, IconSpark, IconStop, IconTable, IconTranslate,
+  IconGear, IconHistory, IconLines, IconLogo, IconPlus, IconSend, IconSpark, IconStop, IconTable, IconTranslate,
 } from "./icons";
 
 const lines = (s: string) => s.split("\n").flatMap((line, i) => (i ? [<br key={i} />, line] : [line]));
@@ -115,9 +115,6 @@ const DEFAULT_SUGGESTIONS: { icon: ReactNode; key: "summary" | "translate" | "ta
   { icon: <IconTable />, key: "table" },
 ];
 
-// 研究範例：首頁主打研究（我們自己寫的固定文字，點了等同使用者打的）
-const RESEARCH_EXAMPLES = ["ex1", "ex2", "ex3"] as const;
-
 // 依頁面產生的建議只差在圖示。點擊直接送出（使用者選的）；建議是看網頁內容產生的、網頁可以操弄它，
 // 所以送出後照樣走 tools.ts 的確認卡（跨網站、不可逆動作），不因為是點建議就放行
 function Empty() {
@@ -130,15 +127,6 @@ function Empty() {
   return (
     <div id="empty" data-loading={loading ? "" : undefined}>
       <div><h2>{t("empty.title")}</h2></div>
-      <p>{t("empty.research")}</p>
-      <div id="research-examples" className="suggest-list">
-        {RESEARCH_EXAMPLES.map((k) => (
-          <button key={k} type="button" className="suggest" title={t(`research.${k}.prompt`)} onClick={() => send(t(`research.${k}.prompt`))}>
-            <IconSearch />
-            <span>{t(`research.${k}.title`)}<small>{t(`research.${k}.subtitle`)}</small></span>
-          </button>
-        ))}
-      </div>
       <p id="empty-sub">{sub ?? t("empty.canSee")}</p>
       <div id="suggestions" className="suggest-list">
         {items.map((s, i) => (
