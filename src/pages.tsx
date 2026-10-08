@@ -288,7 +288,8 @@ export function SettingsPage({ nav }: { nav: Nav }) {
   );
 }
 
-export const openUpgrade = () => chrome.tabs.create({ url: S.me?.upgrade_url ?? `${BACKEND}/upgrade` });
+// 升級網址帶後端的簽章：側邊欄開著很久時手上的 /v1/me 可能是舊的（例如後端換了簽章金鑰），每次都先重抓再開
+export const openUpgrade = async () => { await refreshMe(); chrome.tabs.create({ url: S.me?.upgrade_url ?? `${BACKEND}/upgrade` }); };
 
 function AccountSection() {
   // byok：用自己的 Key，不扣點數；這個模式下完全不碰我們的後端，所以沒有方案與點數可以顯示
