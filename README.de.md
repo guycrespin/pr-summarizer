@@ -4,9 +4,10 @@
 
 # Browser Agent
 
-**Ein KI-Agent in Chromes Seitenleiste, der Ihren Tab liest und darauf agiert — mit Ihrem eigenen Schlüssel oder Ihrem eigenen lokalen Modell.**
+**Ein KI-Agent in Ihrem Browser, der direkt auf der Website arbeitet, die Sie gerade ansehen. Er liest die Seite, klickt, tippt und wechselt für Sie zwischen Seiten – und wenn eine Seite nicht reicht, recherchiert er im ganzen Web und antwortet mit Quellen.**
 
 [![CI](https://github.com/Wadoekeani/browser-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Wadoekeani/browser-agent/actions/workflows/ci.yml)
+[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/iebcachfohpddakkmnopkpfnjibdlhai?label=Chrome%20Web%20Store&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/browser-agent/iebcachfohpddakkmnopkpfnjibdlhai)
 [![Release](https://img.shields.io/github/v/release/Wadoekeani/browser-agent)](https://github.com/Wadoekeani/browser-agent/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Chrome 122+](https://img.shields.io/badge/Chrome-122%2B-4285F4?logo=googlechrome&logoColor=white)
@@ -19,59 +20,83 @@
 
 ## Warum
 
-- **Es arbeitet auf der Seite, die Sie gerade offen haben.** Zusammenfassen, eine Tabelle extrahieren, ein Formular ausfüllen oder sich durch ein paar Seiten klicken — ohne in einen separaten Chat-Tab zu kopieren.
-- **Bringen Sie Ihr eigenes Modell mit.** Anthropic, OpenAI, Gemini, OpenRouter oder alles, was die OpenAI-API spricht — einschließlich Ollama, LM Studio und vLLM auf Ihrem eigenen Rechner.
-- **Kein Server dazwischen.** Anfragen gehen direkt von Ihrem Browser zum gewählten Anbieter. Ihr Schlüssel, Ihre Chats und Erinnerungen bleiben in `chrome.storage.local`. Keine Analytics, kein Konto.
-- **Riskante Aktionen warten auf Sie.** Klicks und Formularabsendungen, die irreversibel wirken, werden angehalten, bis Sie in der Seitenleiste auf *Erlauben* klicken. Diese Prüfung erzwingt der Code der Erweiterung — sie wird dem Modell nicht nur freundlich vorgeschlagen.
+- **Er arbeitet auf der Seite, auf der Sie ohnehin gerade sind.** Fragen Sie in normalen Worten: Fasse das zusammen, übertrage die Preise in eine Tabelle, fülle dieses Formular aus, finde die Einstellung zum Kündigen. Er liest die Seite und handelt darauf, ohne Copy-and-paste in einen Chat-Tab.
+- **Er sieht die Seite so, wie die Website sie gebaut hat.** Das Modell bekommt den Seitentext und eine nummerierte Liste von Schaltflächen, Links und Feldern und klickt `ref: 12`, statt anhand eines Screenshots zu raten. Markieren Sie einen Absatz, um nur danach zu fragen; PDFs funktionieren ebenfalls.
+- **Er kann recherchieren, mit Quellen.** Steht die Antwort nicht auf dieser Seite, sucht er mit Ihrem eigenen Browser, liest eine Handvoll Seiten, vergleicht sie und antwortet mit `[n]`-Zitaten, die zu den einzelnen Quellen verlinken.
+- **Riskante Aktionen warten auf Sie.** Klicks und Formularabsendungen, die unumkehrbar wirken, sowie Seiten unter Adressen, die der Agent sich selbst ausgedacht hat, halten an, bis Sie *Erlauben* drücken. Diese Prüfung wird vom Code der Erweiterung durchgesetzt, nicht dadurch, dass man das Modell höflich bittet.
+- **Kostenlos starten oder den eigenen Schlüssel mitbringen.** Von Haus aus läuft er über Browser Agent Cloud, mit kostenlosen Guthaben pro Monat und ohne Registrierung. Lieber den eigenen Anbieter? Wechseln Sie in den Einstellungen zu Ihrem eigenen API-Schlüssel, dann gehen die Anfragen direkt von Ihrem Browser an diesen Anbieter.
 
 ## Funktionen
 
 **Auf der Seite handeln**
-- Werkzeuge: Seite lesen, klicken, tippen (auch `<select>`-Dropdowns), scrollen, eine URL öffnen. Das Modell erhält eine nummerierte Liste interaktiver Elemente und klickt `ref: 12`, statt CSS-Selektoren zu erraten.
-- Text auf der Seite markieren und nur dazu fragen; die Auswahl wird Ihrer Nachricht angehängt, nicht der ganze Tab.
-- PDF: Text wird mit pdf.js extrahiert. Ein integrierter Viewer lässt Sie Text in einem PDF wie auf jeder anderen Seite markieren. Gescannte PDFs (ohne Textebene) können nach Bestätigung der Kosten als Dokument an Anthropic gesendet werden.
+- Werkzeuge: Seite lesen, klicken, tippen (auch `<select>`-Dropdowns), scrollen, eine URL öffnen. Das Modell bekommt eine nummerierte Liste interaktiver Elemente und klickt `ref: 12`, statt CSS-Selektoren zu erraten.
+- Markieren Sie Text auf der Seite und fragen Sie nur danach; die Markierung wird Ihrer Nachricht statt des ganzen Tabs angehängt.
+- PDFs: Der Text wird mit pdf.js extrahiert. Ein integrierter Viewer erlaubt es, Text in einem PDF wie auf jeder Seite zu markieren. Gescannte PDFs (ohne Textebene) können als Dokument an Claude geschickt werden, nachdem Sie die Kosten bestätigt haben.
+- Startbildschirm: Vorschläge passend zur aktuellen Seite.
+
+**Recherche im ganzen Web**
+- Sucht und liest Seiten in Hintergrund-Tabs Ihres eigenen Browsers; Seiten, bei denen Sie angemeldet sind, funktionieren ebenfalls, und Ihr aktueller Tab bleibt unberührt.
+- Jede Seite wird auf das verdichtet, was für Ihre Frage zählt; Quellen sind nummeriert, `[n]`-Zitate sind anklickbar, und die Quellen werden mit der Unterhaltung gespeichert und beim Export mitgegeben.
+- Folgt Links aus den gelesenen Seiten und geht direkt zu Recherche-Seiten wie GitHub und npm; bei anderen Adressen wird zuerst gefragt.
 
 **In der Unterhaltung**
-- Gestreamte Markdown-Antworten mit Tabellen und Codeblöcken, plus einklappbare Denk-Zusammenfassungen (Anthropic).
-- Frage-Karten (`ask_user`): Wenn das Modell eine Entscheidung braucht, fragt es mit klickbaren Optionen, statt zu raten.
-- Datei-Karten: Ergebnisse als herunterladbare `csv`-, `json`-, `md`-, `txt`-, `tsv`-, `xml`-, `yaml`-, `ics`- oder `vcf`-Dateien, mit Kopieren und Vorschau.
-- Jede Antwort zeigt ihren Token-Verbrauch; jede Aufgabe stoppt nach 30 Werkzeugschritten.
+- Antworten in Markdown als Stream, mit Tabellen und Codeblöcken sowie ausklappbaren Denk-Zusammenfassungen.
+- Fragekarten (`ask_user`): Braucht das Modell eine Entscheidung, fragt es mit anklickbaren Optionen, statt zu raten.
+- Dateikarten: Ergebnisse als herunterladbare `csv`-, `json`-, `md`-, `txt`-, `tsv`-, `xml`-, `yaml`-, `ics`- oder `vcf`-Dateien, mit Kopieren und Vorschau.
 
-**Was bei Ihnen bleibt**
-- Gedächtnis: Sagen Sie „merk dir …“, und der Agent behält kurze Fakten über Sie chatübergreifend. Ansehen, bearbeiten oder abschalten in den Einstellungen.
-- Verlauf: die letzten 30 Unterhaltungen, nach Datum gruppiert. Eine wieder öffnen und weitermachen, oder als Markdown exportieren.
-- 12 eingebaute Skills und `/`-Befehle; schreiben Sie Ihre eigenen im selben `SKILL.md`-Format wie Claude Code.
-- Oberfläche in 15 Sprachen; heller und dunkler Modus folgen Ihrem System.
+**Bleibt bei Ihnen**
+- Gedächtnis: Sagen Sie „merke dir …“, und er behält kurze Fakten über Sie über Chats hinweg. Ansehen, bearbeiten oder abschalten können Sie es in den Einstellungen.
+- Verlauf: die letzten 30 Unterhaltungen, nach Datum gruppiert. Öffnen Sie eine erneut und machen Sie weiter, oder exportieren Sie sie als Markdown.
+- 12 integrierte Skills und `/`-Befehle; eigene schreiben Sie im selben `SKILL.md`-Format wie Claude Code.
+- Oberfläche in 15 Sprachen; helles und dunkles Design folgen Ihrem System.
 
 <table>
   <tr>
     <td width="33%"><img src="docs/providers.png" alt="Anbieterauswahl: Anthropic, OpenAI, Google Gemini, OpenRouter, Benutzerdefiniert (OpenAI-kompatibel)"></td>
-    <td width="33%"><img src="docs/skills.png" alt="Eingabe von / öffnet das Skill-Menü"></td>
-    <td width="33%"><img src="docs/ask-user.png" alt="Eine Frage-Karte mit drei Optionen, eine davon empfohlen"></td>
+    <td width="33%"><img src="docs/skills.png" alt="Die Eingabe von / öffnet das Skill-Menü"></td>
+    <td width="33%"><img src="docs/ask-user.png" alt="Eine Fragekarte mit drei Optionen, eine davon empfohlen"></td>
   </tr>
   <tr>
-    <td align="center">Anbieter wählen</td>
-    <td align="center"><code>/</code> für Skills eingeben</td>
-    <td align="center">Fragt nach, statt zu raten</td>
+    <td align="center">Oder nutzen Sie Ihren eigenen Anbieter</td>
+    <td align="center">Mit <code>/</code> Skills aufrufen</td>
+    <td align="center">Er fragt, statt zu raten</td>
   </tr>
 </table>
 
 <img src="docs/pdf-viewer.png" alt="Integrierter PDF-Viewer mit einem ausgewählten Satz, und die Seitenleiste erklärt ihn">
 
+## So funktioniert die Recherche
+
+Stellen Sie eine Frage, die die aktuelle Seite nicht beantworten kann („Welche React-State-Bibliothek sollte ich 2026 verwenden?"), und der Agent recherchiert:
+
+1. **Suchen.** Er öffnet eine Suche in einem Hintergrund-Tab (Google; verlangt Google den Nachweis, dass Sie ein Mensch sind, wechselt er zu Bing), liest Titel, Links und Textauszüge und schließt den Tab wieder. Nur wenn beide eine Überprüfung verlangen, kommt der Such-Tab in den Vordergrund, damit Sie sie lösen können; danach läuft die Recherche von selbst weiter.
+2. **Lesen.** Er öffnet die relevantesten Ergebnisse in Hintergrund-Tabs – bis zu vier gleichzeitig – und extrahiert den Haupttext. Ihr aktueller Tab wird nie angerührt.
+3. **Verdichten.** Jede Seite wird von einem kleinen, schnellen Modell (Claude Haiku) auf die Punkte, Zitate und Daten reduziert, die für Ihre Frage zählen, damit zwanzig Seiten weder die Unterhaltung noch Ihre Rechnung fluten.
+4. **Antworten.** Sie bekommen zuerst das Fazit, dann eine Vergleichstabelle, eine begründete Empfehlung und das, was die Quellen offenließen. Suchergebnisse und gelesene Seiten sind nummeriert: `[n]` in der Antwort ist ein Link, und die zitierten Quellen stehen unter der Antwort.
+
+Jeden Schritt sehen Sie in der Seitenleiste und können jederzeit auf Stopp drücken. Eine Aufgabe macht höchstens 40 Schritte und liest höchstens 30 Seiten.
+
 ## Schnellstart
 
-Browser Agent ist noch nicht im Chrome Web Store (folgt bald). Installieren Sie bis dahin den Release-Build — kein Node.js oder Build-Schritt nötig. Erfordert Chrome 122+.
+Erfordert Chrome 122+.
+
+1. Installieren Sie **[Browser Agent aus dem Chrome Web Store](https://chromewebstore.google.com/detail/browser-agent/iebcachfohpddakkmnopkpfnjibdlhai)** — klicken Sie auf **Hinzufügen**. Es aktualisiert sich von selbst.
+2. Klicken Sie auf das Symbol in der Symbolleiste, um die Seitenleiste zu öffnen (nicht zu sehen? Über das Puzzleteil-Symbol anheften), und stimmen Sie dem kurzen Datenhinweis zu.
+3. Fragen Sie zur Seite, auf der Sie gerade sind – oder bitten Sie um eine Recherche. Kein Schlüssel und kein Konto nötig.
+
+### Aus einem Release-Zip installieren
+
+Releases können der Store-Version voraus sein, während eine neue Version auf ihre Überprüfung wartet. Kein Node.js oder Build-Schritt nötig.
 
 1. Laden Sie `browser-agent-<version>.zip` vom [neuesten Release](https://github.com/Wadoekeani/browser-agent/releases/latest) herunter und entpacken Sie es.
 2. Öffnen Sie `chrome://extensions` und aktivieren Sie oben rechts den **Entwicklermodus**.
-3. Klicken Sie auf **Entpackte Erweiterung laden** und wählen Sie den entpackten Ordner.
-4. Klicken Sie auf das Symbol in der Symbolleiste, um die Seitenleiste zu öffnen, stimmen Sie dem kurzen Datenhinweis zu, wählen Sie einen Anbieter und fügen Sie einen Schlüssel ein (oder einen lokalen Endpunkt).
+3. Klicken Sie auf **Entpackte Erweiterung laden** und wählen Sie den entpackten Ordner, und fahren Sie dann bei Schritt 2 oben fort.
 
-Zum Aktualisieren laden Sie das neue Zip herunter, ersetzen den Inhalt desselben Ordners und klicken auf das Neuladen-Symbol auf der Erweiterungskarte. Ihre Einstellungen, Chats und Erinnerungen bleiben erhalten. Das Laden aus einem anderen Ordner installiert eine separate Kopie, die leer beginnt.
+Zum Aktualisieren laden Sie das neue Zip herunter, ersetzen den Inhalt desselben Ordners und klicken auf das Neuladen-Symbol auf der Erweiterungskarte. Ihre Einstellungen, Chats und Erinnerungen bleiben erhalten. Wird die Erweiterung aus einem anderen Ordner geladen, entsteht eine separate Kopie, die leer startet – ebenso bei der Store-Version.
 
 ### Aus dem Quellcode bauen
 
-Sie benötigen Node.js 22+.
+Sie brauchen Node.js 22+.
 
 ```bash
 git clone https://github.com/Wadoekeani/browser-agent.git
@@ -80,49 +105,61 @@ npm ci
 npm run build
 ```
 
-Laden Sie dann den Ordner `extension/` wie in Schritt 3 mit **Entpackte Erweiterung laden**.
+Laden Sie anschließend den Ordner `extension/` wie in Schritt 3 mit **Entpackte Erweiterung laden**. Ein aus dem Quellcode gebauter Stand spricht mit einem Browser-Agent-Cloud-Server unter `http://localhost:4410`, sofern Sie beim Bauen nicht `BA_BACKEND` setzen. Verwenden Sie also Ihren eigenen API-Schlüssel (siehe unten) oder zeigen Sie auf ein Backend, das Sie selbst betreiben.
 
-## Anbieter
+## Zwei Arten, ihn zu nutzen
+
+| | Browser Agent Cloud (Standard) | Eigener API-Schlüssel |
+|---|---|---|
+| Einrichtung | Keine – funktioniert direkt nach der Installation | **Einstellungen → Eigenen API-Schlüssel verwenden (erweitert)**, dann Schlüssel oder lokalen Endpunkt einfügen |
+| Konto | Keines; bei der Installation wird eine anonyme Geräte-ID erzeugt | Keines |
+| Modelle | Claude Sonnet, Opus und Haiku (5.5) | Was Ihr Anbieter bietet |
+| Kosten | Kostenlose Guthaben pro Monat; kostenpflichtige Tarife für mehr (Bezahlung über Paddle) | Abrechnung durch Ihren Anbieter; die Erweiterung ist kostenlos |
+| Wohin die Anfragen gehen | Über den Browser-Agent-Cloud-Server zum Modellanbieter | Direkt von Ihrem Browser zu Ihrem Anbieter |
+
+**Guthaben.** Im Cloud-Modus verbraucht jede Aufgabe (eine von Ihnen gesendete Nachricht, bis der Agent anhält) eine feste Zahl an Guthaben, die vom Modell, der Denktiefe und davon abhängt, wie viel jeder Seite gelesen wird. Die Seitenleiste zeigt die Schätzung vor dem Senden und das verbleibende Guthaben nach jeder Aufgabe. Ist es aufgebraucht, pausieren Aufgaben bis zum nächsten Monat oder bis Sie upgraden.
+
+**Eigener Schlüssel.** Diese Anbieter funktionieren; wählen Sie ein Modell mit Tool-Calling-Unterstützung, sonst kann der Agent nicht auf der Seite handeln.
 
 | Anbieter | Was Sie brauchen | Hinweise |
 |---|---|---|
-| Anthropic | [API-Schlüssel](https://console.anthropic.com/settings/keys) | Sonnet 5, Opus 5, Haiku 4.5; Effort-Auswahl; Denk-Zusammenfassungen; gescannte PDFs |
-| OpenAI | [API-Schlüssel](https://platform.openai.com/api-keys) | Die Modellliste wird vom Anbieter abgerufen |
+| Anthropic | [API-Schlüssel](https://console.anthropic.com/settings/keys) | Sonnet 5.5, Opus 5.5, Haiku 5.5; Denktiefe; Denk-Zusammenfassungen; gescannte PDFs; Recherche-Zusammenfassungen pro Seite |
+| OpenAI | [API-Schlüssel](https://platform.openai.com/api-keys) | Die Modellliste wird beim Anbieter abgerufen |
 | Google Gemini | [API-Schlüssel](https://aistudio.google.com/apikey) | Nutzt Geminis OpenAI-kompatiblen Endpunkt |
-| OpenRouter | [API-Schlüssel](https://openrouter.ai/keys) | Jedes werkzeugfähige Modell auf OpenRouter |
-| Benutzerdefiniert (OpenAI-kompatibel) | Basis-URL, Schlüssel optional | Ollama, LM Studio, vLLM, llama.cpp — alles mit `/chat/completions` |
+| OpenRouter | [API-Schlüssel](https://openrouter.ai/keys) | Jedes Modell auf OpenRouter mit Tool-Unterstützung |
+| Benutzerdefiniert (OpenAI-kompatibel) | Basis-URL, Schlüssel optional | Ollama, LM Studio, vLLM, llama.cpp – alles mit `/chat/completions` |
+
+Bei anderen Anbietern als Anthropic liest die Recherche jede Seite als Rohtext statt als Haiku-Zusammenfassung, was mehr Tokens verbraucht.
 
 Lokale Server blockieren Browser-Erweiterungen standardmäßig:
 
-- **Ollama:** `OLLAMA_ORIGINS=chrome-extension://*` setzen und Ollama neu starten (macOS: `launchctl setenv OLLAMA_ORIGINS "chrome-extension://*"`). Basis-URL `http://localhost:11434/v1`.
-- **LM Studio:** Server mit aktiviertem CORS starten, `lms server start --cors`. Basis-URL `http://localhost:1234/v1`.
-
-Wählen Sie ein Modell, das Tool Calling unterstützt; ohne das kann der Agent nicht auf der Seite handeln. Die Nutzung wird von Ihrem Anbieter abgerechnet; die Erweiterung ist kostenlos.
+- **Ollama:** Setzen Sie `OLLAMA_ORIGINS=chrome-extension://*` und starten Sie Ollama neu (macOS: `launchctl setenv OLLAMA_ORIGINS "chrome-extension://*"`). Basis-URL `http://localhost:11434/v1`.
+- **LM Studio:** Starten Sie den Server mit aktiviertem CORS, `lms server start --cors`. Basis-URL `http://localhost:1234/v1`.
 
 ## Skills
 
-Tippen Sie `/` im Nachrichtenfeld, um einen auszuwählen, oder lassen Sie das Modell einen laden, wenn er passt.
+Tippen Sie `/` ins Eingabefeld, um einen auszuwählen, oder lassen Sie das Modell einen laden, wenn er passt.
 
 | Befehl | Was er tut |
 |---|---|
-| `/summarize` | Ein-Zeilen-Fazit, Kernpunkte und Handlungsempfehlungen zur aktuellen Seite |
-| `/translate` | Übersetzt die Seite in Ihre Sprache, Überschriften und Absätze bleiben erhalten |
-| `/extract` | Zieht die Daten der Seite in eine Markdown-Tabelle; bei viel Inhalt eine CSV- oder JSON-Datei |
-| `/compare` | Erstellt eine Vergleichstabelle von Preisen, Tarifen oder Spezifikationen und hebt die Unterschiede hervor |
+| `/summarize` | Kernaussage in einer Zeile, Kernpunkte und To-dos für die aktuelle Seite |
+| `/translate` | Übersetzt die Seite in Ihre Sprache und behält Überschriften und Absätze bei |
+| `/extract` | Zieht die Daten der Seite in eine Markdown-Tabelle; bei vielen Daten eine CSV- oder JSON-Datei |
+| `/compare` | Erstellt eine Vergleichstabelle für Preise, Tarife oder Spezifikationen und hebt die Unterschiede hervor |
 | `/explain` | Erklärt die Seite, einen Begriff oder ein Stück Code in einfachen Worten |
-| `/thread` | Fasst einen Kommentar-Thread zusammen: Hauptargumente, jede Seite, Konsens, lesenswerte Kommentare |
+| `/thread` | Fasst einen Kommentarverlauf zusammen: Hauptargumente, jede Seite, Konsens, lesenswerte Kommentare |
 | `/reply` | Entwirft eine Antwort auf die E-Mail oder Nachricht auf der Seite; kann das Antwortfeld ausfüllen, sendet aber nie |
-| `/fill-form` | Füllt das Formular mit Ihren Angaben aus; fragt nach Fehlendem, stoppt vor dem Absenden |
-| `/review-pr` | Überprüft einen GitHub Pull Request und listet Probleme nach Schweregrad, mit Datei und Zeile |
-| `/checklist` | Verwandelt ein Tutorial in eine abhakbare Schritt-für-Schritt-Liste |
-| `/decide` | Legt die Optionen dar, fragt nacheinander nach Ihren Bedürfnissen und empfiehlt dann eine |
-| `/grill-me` | Stellt Ihren Plan (oder den Vorschlag auf der Seite) mit jeweils einer Multiple-Choice-Frage auf die Probe |
+| `/fill-form` | Füllt das Formular mit Ihren Angaben aus; fragt nach Fehlendem und hält vor dem Absenden an |
+| `/review-pr` | Prüft einen GitHub-Pull-Request und listet Probleme nach Schweregrad mit Datei und Zeile auf |
+| `/checklist` | Macht aus einem Tutorial eine Checkliste mit Schritten |
+| `/decide` | Legt die Optionen dar, fragt nacheinander nach Ihren Anforderungen und empfiehlt dann eine |
+| `/grill-me` | Stellt Ihren Plan (oder den Vorschlag auf der Seite) auf die Probe, mit jeweils einer Multiple-Choice-Frage |
 
-`/clear` startet eine neue Unterhaltung.
+`/clear` startet eine neue Unterhaltung. Für Recherche braucht es keinen Befehl – fragen Sie einfach.
 
-### Eigene Skills schreiben
+### Eigene schreiben
 
-Ein Skill ist eine Markdown-Datei mit `name`- und `description`-Frontmatter, gefolgt von Anweisungen:
+Ein Skill ist eine Markdown-Datei mit Frontmatter `name` und `description`, gefolgt von Anweisungen:
 
 ```markdown
 ---
@@ -134,66 +171,61 @@ description: Turn a meeting page into decisions, action items and owners
 2. List decisions, then a table of action items with owner and due date.
 ```
 
-Skills verwalten Sie unter **Einstellungen → Skills**: erstellen, bearbeiten, `.md`-Dateien importieren, exportieren. Claude-Code-`SKILL.md`-Dateien werden unverändert importiert. Eine optionale `model:`-Zeile (zum Beispiel `model: haiku`) lässt diesen Skill bei Anthropic auf einem günstigeren Claude-Modell laufen.
+Skills verwalten Sie unter **Einstellungen → Skills**: erstellen, bearbeiten, `.md`-Dateien importieren, exportieren. Claude-Code-`SKILL.md`-Dateien werden unverändert importiert. Eine optionale Zeile `model:` (zum Beispiel `model: haiku`) führt diesen Skill mit einem günstigeren Claude-Modell aus.
 
-Nur Namen und Beschreibungen gehen in den System-Prompt; das Modell ruft `use_skill` auf, um die vollständigen Anweisungen bei Bedarf zu laden, und `/name` eingeben hängt sie direkt an. Skills sind Prompts — lesen Sie einen, bevor Sie ihn importieren.
+Nur Namen und Beschreibungen gelangen in den System-Prompt; das Modell ruft `use_skill` auf, um die vollständigen Anweisungen bei Bedarf zu laden, und die Eingabe von `/name` hängt sie direkt an. Skills sind Prompts – lesen Sie einen, bevor Sie ihn importieren.
 
 ## Sicherheit & Datenschutz
 
-**Datenfluss.** Ihr Browser spricht mit genau einer Stelle: dem von Ihnen konfigurierten Anbieter oder Endpunkt. Eine Anfrage enthält Ihre Nachrichten, den vom Agenten gelesenen Seiteninhalt (oder nur Ihre Auswahl, oder das PDF), Ihre gespeicherten Erinnerungen und Ihre Skill-Namen. Ihr API-Schlüssel, Unterhaltungen, Erinnerungen und Skills werden ausschließlich in `chrome.storage.local` gespeichert. Es gibt keinen Browser-Agent-Server, keine Analytics und keinen Remote-Code. Nichts wird gesendet, bevor Sie dem Datenhinweis beim ersten Start zustimmen. Vollständige Details: [Datenschutzrichtlinie](store/privacy-policy.md).
+**Datenfluss.** Eine Anfrage an das Modell enthält Ihre Nachrichten, den Seiteninhalt, den der Agent gelesen hat (oder nur Ihre Markierung oder das PDF), Zusammenfassungen der recherchierten Seiten, Ihre gespeicherten Erinnerungen und Ihre Skill-Namen.
 
-**Was Ihr *Erlauben* braucht.** Diese Aktionen zeigen eine Karte in der Seitenleiste und laufen erst, wenn Sie auf *Erlauben* klicken. Die Karte lebt auf der eigenen Seite der Erweiterung, die eine Website nicht für Sie anklicken kann:
+- Der *Cloud-Modus* sendet diese Anfrage an den Browser-Agent-Cloud-Server, der sie an den Modellanbieter weiterleitet und die Antwort zurückstreamt. Der Server führt Nutzungsprotokolle – welches Modell, wie viele Tokens, Seiten, Suchen und Guthaben eine Aufgabe verbraucht hat –, um Guthaben zu zählen. Er speichert weder Ihre Nachrichten noch Seiteninhalte oder Antworten des Modells; gibt der Modellanbieter einen Fehler zurück, kann diese Fehlermeldung zur Fehlersuche zusammen mit dem Nutzungsprotokoll aufbewahrt werden.
+- *Ihr eigener Schlüssel* sendet Anfragen direkt von Ihrem Browser an Ihren Anbieter. Nichts über Ihre Aufgaben gelangt zu den Servern von Browser Agent; der einzige Kontakt ist die anonyme Registrierung bei der Installation der Erweiterung.
 
-- Klicks und Formularabsendungen, die irreversibel wirken: der sichtbare Text des Buttons, `aria-label`, Titel oder Wert liest sich wie zahlen, kaufen, bestellen, löschen, absenden, senden, veröffentlichen, autorisieren, speichern, teilen, installieren und Ähnliches (in allen 15 Oberflächensprachen); ein Formular mit mehreren Feldern oder einem Passwortfeld; ein Button nur mit Symbol innerhalb eines Formulars; Enter drücken in einem Feld, das nicht in einem Formular liegt (Chat-Boxen). Stimmen der sichtbare Text eines Buttons und sein `aria-label` nicht überein, warnt die Karte;
-- zu einer anderen Website wechseln, durch Navigation oder Linkklick, außer es ist die Website, auf der die Aufgabe begann, eine in Ihrer Nachricht genannte Website, oder eine bereits in dieser Aufgabe erlaubte. Die Karte zeigt die vollständige URL inklusive Query-String;
-- eine Erinnerung speichern, sobald die Unterhaltung Webinhalte enthält (eine gelesene Seite, ein PDF, eine Auswahl).
+Ihre Unterhaltungen, Erinnerungen, Skills, Einstellungen und jeder API-Schlüssel werden nur in `chrome.storage.local` gespeichert. Keine Analyse, keine Werbung. Bevor Sie dem Datenhinweis beim ersten Start zustimmen, wird nichts an ein Modell gesendet. Alle Details: [Datenschutzerklärung](store/privacy-policy.md).
 
-Ein Klick auf einen Vorschlag sendet ihn sofort. Aus der Seite erzeugte Vorschläge werden nach dem Lesen des Seiteninhalts geschrieben, eine Seite kann sie also beeinflussen: darin genannte Websites zählen nicht als von Ihnen genannte Websites, und was sie auslösen, durchläuft trotzdem dieselben Bestätigungskarten. Links in Antworten zeigen ihre echte Domain neben dem Text.
+**Die Recherche nutzt Ihren Browser.** Hintergrund-Tabs laden Seiten mit Ihren Cookies und angemeldeten Sitzungen, genau als hätten Sie sie selbst geöffnet; PDFs lädt die Erweiterung direkt herunter, ebenfalls mit Ihren Cookies. Suchen sind gewöhnliche Google- (oder Bing-)Suchen aus Ihrem Browser; sind Sie angemeldet, können sie daher im Suchverlauf dieses Kontos gespeichert werden. Die Suchbegriffe formuliert das Modell aus Ihrer Frage.
 
-**Ausgabe und Dateien.** Modellantworten werden mit DOMPurify gerendert. Bilder, Medien, SVG, iFrames, Formulare und Inline-Styles werden entfernt, sodass eine Seite das Modell nicht dazu bringen kann, Ihre Unterhaltung über eine Bild-URL preiszugeben. Erzeugte Dateien sind nur reine Textformate (`csv`, `json`, `md`, …), und CSV/TSV-Zellen, die wie der Beginn einer Tabellenkalkulationsformel aussehen, werden neutralisiert.
+**Was Ihr *Erlauben* braucht.** Diese Aktionen zeigen eine Karte in der Seitenleiste und laufen erst, wenn Sie *Erlauben* drücken. Die Karte befindet sich auf der eigenen Seite der Erweiterung, die eine Website nicht für Sie anklicken kann:
+
+- Klicks und Formularabsendungen, die unumkehrbar wirken: Der sichtbare Text der Schaltfläche, `aria-label`, title oder value klingt nach bezahlen, kaufen, bestellen, löschen, absenden, senden, veröffentlichen, autorisieren, speichern, teilen, installieren und Ähnlichem (in allen 15 Oberflächensprachen); ein Formular mit mehreren Feldern oder einem Passwortfeld; eine reine Symbol-Schaltfläche in einem Formular; Enter in einem Feld, das nicht in einem Formular liegt (Chat-Eingaben). Stimmen der sichtbare Text einer Schaltfläche und ihr `aria-label` nicht überein, warnt die Karte;
+- der Wechsel zu einer anderen Website in Ihrem Tab, per Navigation oder Klick auf einen Link, es sei denn, es ist die Website, auf der die Aufgabe begann, eine, die Sie in Ihrer Nachricht genannt haben, oder eine, die Sie in dieser Aufgabe bereits erlaubt haben;
+- das Lesen einer Seite im Hintergrund, deren Adresse der Agent selbst zusammengesetzt hat. Ohne Nachfrage liest er nur exakte Adressen aus Suchergebnissen, Links auf bereits gelesenen Seiten, Adressen aus Ihrer Nachricht und Recherche-Seiten (GitHub, npm). Seiten auf `localhost` oder in Ihrem lokalen Netzwerk werden nicht gelesen, außer Sie haben die Adresse getippt; bei Seiten in einem Hintergrund-Tab gilt das auch für öffentliche Domains, die auf eine lokale Adresse auflösen (bei PDFs wird nur die Adresse selbst geprüft);
+- das Speichern einer Erinnerung, sobald die Unterhaltung Webinhalt enthält (eine gelesene Seite, ein PDF, eine Markierung).
+
+Karten, die eine Adresse betreffen, zeigen sie mit ihrer Query-String, weil eine Adresse Daten nach außen tragen kann; sehr lange Adressen werden gekürzt, wobei die Domain und der Anfang der Query-String erhalten bleiben.
+
+Ein Klick auf einen Vorschlag sendet ihn sofort. Aus der Seite erzeugte Vorschläge werden nach dem Lesen des Seiteninhalts verfasst, eine Seite kann sie also beeinflussen: Die dort genannten Websites zählen nicht als von Ihnen genannte Websites, und was sie auslösen, läuft weiterhin über dieselben Karten. Links in Antworten zeigen neben dem Text ihre echte Domain; die Quellenliste zeigt die Domain jeder Quelle.
+
+**Ausgabe und Dateien.** Antworten des Modells werden mit DOMPurify gerendert. Bilder, Medien, SVG, iframes, Formulare und Inline-Styles werden entfernt, damit eine Seite das Modell nicht dazu bringen kann, Ihre Unterhaltung über eine Bild-URL preiszugeben. Erzeugte Dateien sind ausschließlich Klartextformate (`csv`, `json`, `md`, …), und CSV/TSV-Zellen, die wie eine Tabellenkalkulationsformel beginnen, werden entschärft.
 
 ### Bekannte Einschränkungen
 
-- **Prompt Injection ist nicht gelöst.** Der Agent liest Websites mit Ihrer eingeloggten Sitzung und handelt darauf. Eine bösartige Seite kann versuchen, ihn dazu zu bringen, Ihre Unterhaltung, Erinnerungen oder Daten anderer Seiten irgendwohin zu senden oder Dinge in Ihrem Namen zu tun. Die Bestätigungskarten decken die oben genannten Hochrisiko-Aktionen ab; sie sind kein vollständiger Schutz.
-- Nutzen Sie es nicht auf nicht vertrauenswürdigen Seiten, während Tabs zu Ihrer Bank, E-Mail oder Firmenverwaltung offen sind, und beobachten Sie es, während eine Aufgabe läuft.
-- Die Erkennung riskanter Klicks ist eine Heuristik aus Schlüsselwörtern und Formularform. Manche Buttons werden übersehen.
-- Tippen in ein Feld auf derselben Website fragt nicht nach. Eine bösartige Seite kann lesen, was der Agent tippt (zum Beispiel mit einem `input`-Listener) und es an ihren eigenen Server senden.
-- Eine importierte `SKILL.md` gilt als vertrauenswürdige Anweisung. Importieren Sie nur Skills, die Sie gelesen haben.
-- Erinnerungen und Unterhaltungen werden unverschlüsselt in Ihrem Browser gespeichert und als Teil jeder Anfrage an den gewählten Anbieter gesendet.
-- Jede Aufgabe stoppt nach 30 Werkzeugschritten, und jede Antwort zeigt ihren Token-Verbrauch, sodass eine außer Kontrolle geratene Schleife begrenzt und sichtbar ist.
+- **Prompt-Injection ist nicht gelöst.** Der Agent liest viele nicht vertrauenswürdige Seiten mit Ihrer angemeldeten Sitzung. Eine bösartige Seite kann versuchen, ihn dazu zu bringen, Ihre Unterhaltung, Ihre Erinnerungen oder Daten anderer Websites irgendwohin zu senden oder Dinge in Ihrem Namen zu tun. Die Karten decken die oben genannten Aktionen mit hohem Risiko ab; sie sind kein vollständiger Schutz. Kleine Datenmengen können weiterhin darüber abfließen, welchen Links der Agent folgt oder wonach er sucht.
+- Recherchieren Sie nicht und führen Sie keine Aufgaben auf nicht vertrauenswürdigen Seiten aus, solange Tabs mit Ihrer Bank, Ihrem E-Mail-Postfach oder der Firmenverwaltung geöffnet sind, und behalten Sie ihn im Auge, solange eine Aufgabe läuft.
+- Die Erkennung riskanter Klicks ist eine Heuristik aus Schlüsselwörtern und Formularform. Manche Schaltflächen entgehen ihr.
+- Tippen in ein Feld auf derselben Website löst keine Nachfrage aus. Eine bösartige Seite kann mitlesen, was der Agent tippt (zum Beispiel mit einem `input`-Listener), und es an ihren eigenen Server senden.
+- Eine importierte `SKILL.md` besteht aus vertrauenswürdigen Anweisungen. Importieren Sie nur Skills, die Sie gelesen haben.
+- Erinnerungen und Unterhaltungen werden unverschlüsselt in Ihrem Browser gespeichert und mit jeder Anfrage an das Modell gesendet (über Browser Agent Cloud oder an Ihren eigenen Anbieter).
 
 ## Sprachen
 
-English, 繁體中文, 简体中文, 日本語, 한국어, Español, Français, Deutsch, Português (Brasil), Italiano, Русский, Tiếng Việt, Bahasa Indonesia, ไทย, Türkçe. Die Standardsprache folgt Ihrem Browser; ändern Sie sie unter **Einstellungen → Sprache**. Das Modell antwortet in Ihrer Oberflächensprache, außer Sie schreiben in einer anderen.
+English, 繁體中文, 简体中文, 日本語, 한국어, Español, Français, Deutsch, Português (Brasil), Italiano, Русский, Tiếng Việt, Bahasa Indonesia, ไทย, Türkçe. Die Standardsprache folgt Ihrem Browser; ändern Sie sie unter **Einstellungen → Sprache**. Das Modell antwortet in der Sprache Ihrer Oberfläche, es sei denn, Sie schreiben in einer anderen.
 
 ## Entwicklung
 
 ```bash
 npm run watch      # rebuild on save; then click reload on the extension card
 npm run typecheck  # tsc --noEmit
-npm run check      # unit self-checks: skills, memory, history, files, providers, i18n
-npm run test:e2e   # builds, loads the extension in Playwright against mocked model APIs
+npm run check      # unit self-checks: skills, memory, history, files, providers, security, i18n
+npm run test:e2e   # builds into dist/e2e-ext and runs it in Playwright against mocked model, backend, search and websites
 ```
 
-Die Seitenleiste ist React + TypeScript, gebündelt mit esbuild in `extension/`. Es gibt kein Backend: `src/agent.ts` führt die Agentenschleife in der Seitenleiste aus und ruft Anthropic über das offizielle SDK oder jede OpenAI-kompatible API über `src/providers.ts` auf. Werkzeuge in `src/tools.ts` laufen im aktiven Tab mit `chrome.scripting`; `src/elements.ts` erstellt die nummerierte Elementliste und die Prüfung auf irreversible Aktionen. Die E2E-Suite braucht keinen API-Schlüssel und kostet nichts.
+Die Seitenleiste ist React + TypeScript, von esbuild nach `extension/` gebündelt. `src/agent.ts` führt die Agentenschleife in der Seitenleiste aus: Im Cloud-Modus ruft sie mit dem offiziellen SDK die Browser-Agent-Cloud-API auf (Anthropic-kompatibel, Adresse beim Build über `BA_BACKEND` gesetzt); mit Ihrem eigenen Schlüssel ruft sie Anthropic direkt oder jede OpenAI-kompatible API über `src/providers.ts` auf. Die Werkzeuge in `src/tools.ts` laufen mit `chrome.scripting` im aktiven Tab oder in Hintergrund-Tabs; `src/elements.ts` erstellt die nummerierte Elementliste und die Prüfung auf unumkehrbare Aktionen. Die e2e-Suite braucht keinen API-Schlüssel, kostet nichts und sendet keine Anfragen ins echte Internet.
 
-| Pfad | Was |
-|---|---|
-| `src/sidepanel.tsx` | Einstiegspunkt und Haupt-UI (Onboarding, Chat, Nachrichtenfeld, `/`-Menü) |
-| `src/agent.ts` | Agentenschleife, Laden der Einstellungen, Standard-Skills, Speichern/Wiederherstellen des Verlaufs |
-| `src/providers.ts` | Anbieterliste und der OpenAI-kompatible Adapter |
-| `src/tools.ts` | Werkzeug-Implementierungen (`runTool`) und die Bestätigungssperre |
-| `src/shared.ts` | System-Prompt und Werkzeugdefinitionen |
-| `src/elements.ts` | Nummerierte interaktive Elemente (`data-ba`-Referenzen) und die Risikoprüfung |
-| `src/log.tsx` | Chat-Verlauf, Karten, Markdown-Rendering mit DOMPurify |
-| `src/pages.tsx` | Einstellungen, Verlauf und Skill-Editor |
-| `src/pdf.ts`, `src/viewer.ts` | PDF-Textextraktion und der integrierte Viewer |
-| `src/selection.ts` | Chip für ausgewählten Text |
-| `src/skills.ts`, `src/memory.ts`, `src/history.ts`, `src/files.ts` | `SKILL.md`-Parsing, Gedächtnis, Verlauf, Datei-Karten |
-| `src/i18n/` | `t()` und die 15 Wörterbücher (`en.ts` ist die Quelle der Wahrheit) |
-| `extension/` | Manifest, `_locales/`, HTML, Service Worker — diesen Ordner in Chrome laden |
+Wofür die einzelnen Dateien da sind, steht in der Tabelle unter [Development](README.md#development) in der englischen Fassung.
 
-Um ein Werkzeug hinzuzufügen: sein Schema zu `tools` in `src/shared.ts` hinzufügen und einen `case` in `runTool` in `src/tools.ts`.
+Um ein Werkzeug hinzuzufügen: Ergänzen Sie sein Schema in `tools` in `src/shared.ts` und einen `case` in `runTool` in `src/tools.ts`.
 
 ### Übersetzen
 
@@ -201,11 +233,11 @@ Kopieren Sie `src/i18n/locales/en.ts` z. B. nach `nl.ts`, deklarieren Sie es als
 
 ## Mitwirken
 
-Issues und PRs sind willkommen — siehe [CONTRIBUTING.md](CONTRIBUTING.md). Halten Sie PRs klein, führen Sie die drei obigen Prüfungen aus und beschreiben Sie, wie Sie getestet haben, was sie nicht abdecken.
+Issues und PRs sind willkommen – siehe [CONTRIBUTING.md](CONTRIBUTING.md). Halten Sie PRs klein, führen Sie die drei Prüfungen oben aus und schreiben Sie dazu, wie Sie alles getestet haben, was diese nicht abdecken.
 
 ## Lizenz
 
-[MIT](LICENSE). Browser Agent ist ein unabhängiges Projekt und nicht mit Anthropic, OpenAI oder Google verbunden.
+Die Erweiterung steht unter der [MIT](LICENSE)-Lizenz. Browser Agent Cloud, der optionale gehostete Dienst hinter dem Standardmodus, wird separat betrieben und ist nicht Teil dieses Repositorys. Browser Agent ist ein unabhängiges Projekt und nicht mit Anthropic, OpenAI oder Google verbunden.
 
 ---
 

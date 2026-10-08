@@ -4,9 +4,10 @@
 
 # Browser Agent
 
-**常驻 Chrome 侧边栏的 AI agent：读取并操作你当前的标签页——用你自己的密钥，或你自己搭的本地模型。**
+**把 AI agent 放进你的浏览器，直接操作你正在看的网站：读页面、点击、输入、在页面之间跳转都交给它；一页不够时，它还能跨网站做研究，给你附带来源的答案。**
 
 [![CI](https://github.com/Wadoekeani/browser-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Wadoekeani/browser-agent/actions/workflows/ci.yml)
+[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/iebcachfohpddakkmnopkpfnjibdlhai?label=Chrome%20Web%20Store&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/browser-agent/iebcachfohpddakkmnopkpfnjibdlhai)
 [![Release](https://img.shields.io/github/v/release/Wadoekeani/browser-agent)](https://github.com/Wadoekeani/browser-agent/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Chrome 122+](https://img.shields.io/badge/Chrome-122%2B-4285F4?logo=googlechrome&logoColor=white)
@@ -17,57 +18,81 @@
 
 </div>
 
-## 为什么做这个
+## 为什么用它
 
-- **直接在你正在看的页面上干活。** 生成摘要、把内容抽成表格、填表单、连续点开好几个页面——不用把内容复制粘贴到另一个聊天窗口。
-- **模型任你选。** Anthropic、OpenAI、Gemini、OpenRouter，或任何兼容 OpenAI API 的服务，包括跑在你自己电脑上的 Ollama、LM Studio、vLLM。
-- **中间没有服务器。** 请求从你的浏览器直接发到你选的服务商。密钥、对话记录、记忆都只存在 `chrome.storage.local` 里。没有埋点分析，也不需要账号。
-- **高风险操作会等你确认。** 看起来不可逆的点击和表单提交,要你在侧边栏点「允许」才会执行。这道检查写死在扩展程序的代码里,不是靠提示词跟模型商量。
+- **直接在你正在看的页面上做事。** 用平时说话的方式交代：总结这一页、把价格整理成表格、帮我填这张表、找到取消订阅的设置。它读懂页面、直接动手——不用把内容复制粘贴到另一个聊天标签页。
+- **它看到的是网站真正的结构。** 模型拿到的是页面文字，以及编号过的按钮、链接和输入框清单，直接点 `ref: 12`，而不是对着截图猜位置。选中一段文字就只问那一段；PDF 也可以。
+- **也能做研究，并附上来源。** 答案不在这一页时，它会用你自己的浏览器搜索、读几个页面、互相比较，回答里的 `[n]` 引用都会链接回出处。
+- **高风险操作会等你点头。** 看起来不可逆的点击和表单提交，以及 agent 自己拼出来的网址，都要你按下“允许”才会执行。这道检查写在扩展程序的代码里，不是靠提示词拜托模型。
+- **免费开始，也可以用自己的密钥。** 装好就能使用 Browser Agent Cloud，每月有免费点数，不用注册。想用自己的服务商？在设置里改用自己的 API Key，请求就从你的浏览器直接发往该服务商。
 
 ## 功能
 
-**在页面上操作**
-- 工具:读取页面、点击、输入(包括 `<select>` 下拉框)、滚动、打开网址。模型拿到的是页面上可交互元素的编号列表,点 `ref: 12` 就行,不用猜 CSS 选择器。
-- 选中页面上的文字,就只针对这段内容提问;发送的是你选中的内容,不是整个页面。
-- PDF:用 pdf.js 提取文字。内置阅读器让你在 PDF 里像看普通网页一样选中文字。没有文字层的扫描件,在你确认费用之后可以整份发给 Anthropic 识别。
+**操作页面**
+- 工具：读取页面、点击、输入（包括 `<select>` 下拉菜单）、滚动、打开网址。模型拿到的是编号过的可交互元素清单，直接点 `ref: 12`，不用猜 CSS 选择器。
+- 在页面上选中文字，只针对这一段提问；附上的是你选中的内容，而不是整个标签页。
+- PDF：用 pdf.js 提取文字。内置查看器让你像在普通网页上一样选中 PDF 里的文字。扫描件（没有文字层）在你确认费用后，可以整份交给 Claude 阅读。
+- 主页：根据你当前所在页面给出建议。
 
-**对话体验**
-- 流式输出的 Markdown 回复,支持表格和代码块,还有可折叠的思考过程摘要(Anthropic)。
-- 问题卡片(`ask_user`):模型需要你做决定时,会给出可点击的选项让你选,而不是自己瞎猜。
-- 文件卡片:结果可以下载成 `csv`、`json`、`md`、`txt`、`tsv`、`xml`、`yaml`、`ics` 或 `vcf` 文件,支持复制和预览。
-- 每条回复都会显示消耗的 token 数;单次任务最多执行 30 个工具步骤。
+**跨网站研究**
+- 在你自己浏览器的后台标签页里搜索和阅读；需要登录才能看的页面也可以，你当前的标签页不会被动到。
+- 每个页面都会按你的问题浓缩成重点；来源有编号，`[n]` 引用可以点击，来源会随对话一起保存，导出时也会附上。
+- 会顺着读过的页面里的链接继续读，GitHub、npm 这类研究网站可以直接访问；其他网址会先问你。
 
-**属于你自己的东西**
-- 记忆:说一句「记住……」,它就会在跨对话时记住关于你的简短信息。可以在设置里查看、编辑或关闭。
-- 历史记录:最近 30 次对话,按日期分组。可以打开继续聊,也能导出成 Markdown。
-- 12 个内置技能和 `/` 指令;自己写的技能用和 Claude Code 一样的 `SKILL.md` 格式。
-- 界面支持 15 种语言;浅色/深色主题跟随系统。
+**对话中**
+- 流式输出的 Markdown 回复，支持表格和代码块，还有可展开的思考摘要。
+- 选择题卡片（`ask_user`）：模型需要你做决定时，会用可点击的选项来问你，而不是乱猜。
+- 文件卡片：结果可以下载为 `csv`、`json`、`md`、`txt`、`tsv`、`xml`、`yaml`、`ics` 或 `vcf` 文件，可以复制和预览。
+
+**留在你手里**
+- 记忆：说“记住……”，它会在不同对话之间记住关于你的简短事实。可以在设置里查看、编辑或关闭。
+- 历史：最近 30 个对话，按日期分组。可以打开后接着聊，或导出为 Markdown。
+- 12 个内置技能和 `/` 命令；也可以用与 Claude Code 相同的 `SKILL.md` 格式自己写。
+- 界面支持 15 种语言；浅色和深色主题跟随系统。
 
 <table>
   <tr>
-    <td width="33%"><img src="docs/providers.png" alt="服务商选择:Anthropic、OpenAI、Google Gemini、OpenRouter、自定义(兼容 OpenAI)"></td>
+    <td width="33%"><img src="docs/providers.png" alt="服务商选择：Anthropic、OpenAI、Google Gemini、OpenRouter、自定义（OpenAI 兼容）"></td>
     <td width="33%"><img src="docs/skills.png" alt="输入 / 打开技能菜单"></td>
-    <td width="33%"><img src="docs/ask-user.png" alt="一张带三个选项的问题卡片,其中一个被标为推荐"></td>
+    <td width="33%"><img src="docs/ask-user.png" alt="一张有三个选项、其中一个标为推荐的选择题卡片"></td>
   </tr>
   <tr>
-    <td align="center">选一个服务商</td>
+    <td align="center">或者用你自己的服务商</td>
     <td align="center">输入 <code>/</code> 调出技能</td>
-    <td align="center">拿不准就问你,不瞎猜</td>
+    <td align="center">不确定就问你，不乱猜</td>
   </tr>
 </table>
 
-<img src="docs/pdf-viewer.png" alt="内置 PDF 阅读器选中了一句话,侧边栏正在解释这句话的意思">
+<img src="docs/pdf-viewer.png" alt="内置 PDF 查看器里选中了一句话，侧边栏正在解释它">
+
+## 研究是怎么进行的
+
+问一个当前页面回答不了的问题——比如“2026 年该用哪个 React 状态管理库？”——agent 就会去做研究：
+
+1. **搜索。** 在后台标签页里打开搜索（Google；如果 Google 要求验证你是真人，就改用 Bing），读取标题、链接和摘要，然后关掉这个标签页。只有两个都要求验证时，搜索标签页才会切到前台让你完成验证，之后研究会自动继续。
+2. **阅读。** 在后台标签页里打开最相关的结果——一次最多 4 个——并提取正文。你当前的标签页完全不会被动到。
+3. **浓缩。** 每个页面先交给一个小而快的模型（Claude Haiku），按你的问题提炼出要点、原文引句和日期，这样二十个页面的全文不会塞满对话，也不会让费用暴涨。
+4. **回答。** 先给结论，再给对比表、带理由的推荐，以及来源没能说清的地方。搜索结果和读过的页面都有编号：回答里的 `[n]` 是链接，回复下方会列出引用到的来源。
+
+每一步你都能在侧边栏里看到，随时可以按停止。一个任务最多执行 40 步、最多读 30 个页面。
 
 ## 快速开始
 
-Browser Agent 还没上架 Chrome 网上应用店(即将上线)。在那之前,直接装 Release 版就行——不需要 Node.js,也不用自己构建。需要 Chrome 122 及以上版本。
+需要 Chrome 122 及以上版本。
+
+1. 到 **[Chrome 网上应用店安装 Browser Agent](https://chromewebstore.google.com/detail/browser-agent/iebcachfohpddakkmnopkpfnjibdlhai)**，点击 **添加至 Chrome**。之后会自动更新。
+2. 点击工具栏上的图标打开侧边栏（没看到的话，从拼图图标的菜单里把它固定出来），并同意简短的数据说明。
+3. 针对你正在看的页面提问，或者让它研究某件事。不需要密钥，也不需要账号。
+
+### 从 Release 的 zip 安装
+
+新版本在等商店审核期间，Release 可能比商店更新。不需要 Node.js，也不用自己构建。
 
 1. 从[最新 Release](https://github.com/Wadoekeani/browser-agent/releases/latest) 下载 `browser-agent-<版本号>.zip` 并解压。
-2. 打开 `chrome://extensions`,开启右上角的**开发者模式**。
-3. 点击**加载已解压的扩展程序**,选中刚解压出来的文件夹。
-4. 点击工具栏上的图标打开侧边栏,同意简短的数据说明,选一个服务商并粘贴密钥(或者填写本地端点地址)。
+2. 打开 `chrome://extensions`，开启右上角的**开发者模式**。
+3. 点击**加载已解压的扩展程序**，选中刚解压出来的文件夹，然后从上面第 2 步继续。
 
-要更新时,下载新的 zip 包,覆盖同一个文件夹里的内容,然后点扩展程序卡片上的刷新图标。你的设置、对话和记忆都会保留。如果从别的文件夹加载,会变成另一份独立安装,里面是空的。
+更新时，下载新的 zip，覆盖同一个文件夹里的内容，再点击扩展卡片上的重新加载图标。设置、对话和记忆都会保留。从别的文件夹加载会变成另一份从空白开始的副本，商店版也是一样。
 
 ### 从源码构建
 
@@ -80,132 +105,137 @@ npm ci
 npm run build
 ```
 
-然后照第 3 步,用**加载已解压的扩展程序**选中 `extension/` 文件夹。
+然后按第 3 步，用**加载已解压的扩展程序**加载 `extension/` 文件夹。自己构建的版本会连接到 `http://localhost:4410` 的 Browser Agent Cloud 服务器（构建时可以用 `BA_BACKEND` 改掉），所以请改用自己的 API Key（见下文），或者指向你自己搭建的后端。
 
-## 服务商
+## 两种使用方式
+
+| | Browser Agent Cloud（默认） | 自己的 API Key |
+|---|---|---|
+| 设置 | 不用，装好就能用 | **设置 → 使用自己的 API Key（高级）**，粘贴密钥或本地端点 |
+| 账号 | 不用；安装时会创建一个匿名的设备 ID | 不用 |
+| 模型 | Claude Sonnet、Opus、Haiku（5.5） | 取决于你的服务商提供什么 |
+| 费用 | 每月有免费点数；付费方案可获得更多（由 Paddle 处理结账） | 由你的服务商计费；扩展程序本身免费 |
+| 请求发往哪里 | 经过 Browser Agent Cloud 服务器转给模型服务商 | 从你的浏览器直接发给你的服务商 |
+
+**点数。** Cloud 模式下，每个任务（你发送的一条消息，直到 agent 停下来为止）会消耗固定数量的点数，具体由模型、思考深度，以及每个页面读取的篇幅决定。发送前侧边栏会显示预估，每个任务结束后会显示剩余点数。点数用完后，任务会暂停，要等到下个月或升级后才能继续。
+
+**自己的密钥。** 以下服务商都可以使用；请选择支持工具调用（tool calling）的模型，否则 agent 无法操作页面。
 
 | 服务商 | 需要什么 | 备注 |
 |---|---|---|
-| Anthropic | [API 密钥](https://console.anthropic.com/settings/keys) | Sonnet 5、Opus 5、Haiku 4.5;可调节思考强度;思考过程摘要;支持扫描版 PDF |
-| OpenAI | [API 密钥](https://platform.openai.com/api-keys) | 模型列表实时从服务商那里获取 |
-| Google Gemini | [API 密钥](https://aistudio.google.com/apikey) | 走 Gemini 兼容 OpenAI 的接口 |
-| OpenRouter | [API 密钥](https://openrouter.ai/keys) | OpenRouter 上任何支持工具调用的模型都能用 |
-| 自定义(兼容 OpenAI) | 基础 URL,密钥可选 | Ollama、LM Studio、vLLM、llama.cpp——只要有 `/chat/completions` 接口都行 |
+| Anthropic | [API 密钥](https://console.anthropic.com/settings/keys) | Sonnet 5.5、Opus 5.5、Haiku 5.5；思考深度；思考摘要；扫描版 PDF；研究时逐页整理 |
+| OpenAI | [API 密钥](https://platform.openai.com/api-keys) | 模型列表从服务商获取 |
+| Google Gemini | [API 密钥](https://aistudio.google.com/apikey) | 使用 Gemini 的 OpenAI 兼容端点 |
+| OpenRouter | [API 密钥](https://openrouter.ai/keys) | OpenRouter 上任何支持工具调用的模型 |
+| 自定义（OpenAI 兼容） | Base URL，密钥可不填 | Ollama、LM Studio、vLLM、llama.cpp——任何提供 `/chat/completions` 的服务 |
 
-本地服务器默认会拦截浏览器扩展的请求:
+使用 Anthropic 以外的服务商时，研究读到的每个页面会以原始文本交给模型，而不是经过 Haiku 整理，因此 token 用量会更多。
 
-- **Ollama:** 设置 `OLLAMA_ORIGINS=chrome-extension://*` 后重启 Ollama(macOS:`launchctl setenv OLLAMA_ORIGINS "chrome-extension://*"`)。基础 URL 填 `http://localhost:11434/v1`。
-- **LM Studio:** 用 `lms server start --cors` 开启 CORS 启动服务。基础 URL 填 `http://localhost:1234/v1`。
+本地服务器默认会拦截浏览器扩展：
 
-请选择支持工具调用(tool calling)的模型,否则它没法操作页面。费用由服务商向你收取;扩展程序本身免费。
+- **Ollama：** 设置 `OLLAMA_ORIGINS=chrome-extension://*` 后重启 Ollama（macOS：`launchctl setenv OLLAMA_ORIGINS "chrome-extension://*"`）。Base URL 填 `http://localhost:11434/v1`。
+- **LM Studio：** 以开启 CORS 的方式启动服务器：`lms server start --cors`。Base URL 填 `http://localhost:1234/v1`。
 
 ## 技能
 
-在输入框里打 `/` 挑一个,或者让模型在合适的时候自己加载。
+在输入框里输入 `/` 选一个，或者让模型在合适的时候自己加载。
 
-| 指令 | 作用 |
+| 命令 | 用途 |
 |---|---|
 | `/summarize` | 把当前页面整理成一句话结论、要点和待办事项 |
-| `/translate` | 把页面翻译成你的语言,保留标题和段落结构 |
-| `/extract` | 把页面上的数据抽成 Markdown 表格;数据量大时另外生成 CSV 或 JSON 文件 |
-| `/compare` | 把价格、方案或规格整理成对比表,标出关键差异 |
-| `/explain` | 用大白话解释这个页面,或页面上的某个术语、某段代码 |
-| `/thread` | 总结一个评论区:主要论点、正反双方、共识、值得一看的评论 |
-| `/reply` | 读懂页面上的邮件或消息,起草一份回复;可以直接填进回复框,但绝不会替你发送 |
-| `/fill-form` | 用你的信息填表单;缺什么就问你,提交前一定会停下来确认 |
-| `/review-pr` | 审查 GitHub PR,按严重程度列出问题,并标出文件和行号 |
-| `/checklist` | 把一篇教程转成可以逐项打勾的步骤清单 |
-| `/decide` | 列出所有选项,一次问一个问题了解你的需求,最后给出推荐 |
-| `/grill-me` | 用一次一道选择题的方式,拷问你的计划(或页面上的提案) |
+| `/translate` | 把页面翻译成你的语言，保留标题和段落结构 |
+| `/extract` | 把页面上的数据提取成 Markdown 表格；数据多时另外给出 CSV 或 JSON 文件 |
+| `/compare` | 把价格、方案或规格做成对比表，并标出差异 |
+| `/explain` | 用大白话解释这一页，或页面上的某个术语、某段代码 |
+| `/thread` | 梳理评论串：主要论点、各方观点、共识，以及值得一看的评论 |
+| `/reply` | 读懂页面上的邮件或消息并起草回复；可以填进回复框，绝不会替你发送 |
+| `/fill-form` | 用你的资料填写表单；缺的会先问你，提交前一定会停下来 |
+| `/review-pr` | 审查 GitHub 拉取请求（PR），按严重程度列出问题，并指出文件和行号 |
+| `/checklist` | 把教程转成可以逐项打勾的步骤清单 |
+| `/decide` | 列出选项，一次一个问题地了解你的需求，最后推荐其中一个 |
+| `/grill-me` | 用一次一道选择题的方式拷问你的计划（或页面上的提案） |
 
-`/clear` 开始一段新对话。
+`/clear` 开始新对话。研究不需要命令——直接问就行。
 
 ### 自己写技能
 
-技能就是一份 Markdown 文件:开头是带 `name` 和 `description` 的 frontmatter,后面接具体指示:
+技能就是一份 Markdown 文件：开头是包含 `name` 和 `description` 的 frontmatter，后面写指令：
 
 ```markdown
 ---
 name: meeting-notes
-description: 把会议页面整理成决议、待办事项和负责人
+description: Turn a meeting page into decisions, action items and owners
 ---
 
-1. 用 read_page 读完整个页面。
-2. 列出决议事项,再用表格列出待办事项、负责人和截止日期。
+1. Read the whole page with read_page.
+2. List decisions, then a table of action items with owner and due date.
 ```
 
-在**设置 → 技能**里管理:新建、编辑、导入 `.md` 文件、导出。Claude Code 的 `SKILL.md` 文件可以直接导入。可选的 `model:` 一行(比如 `model: haiku`)能让这个技能在使用 Anthropic 时切换到更便宜的 Claude 模型。
+在**设置 → 技能**里管理技能：新建、编辑、导入 `.md` 文件、导出。Claude Code 的 `SKILL.md` 文件可以直接导入。可选的 `model:` 一行（例如 `model: haiku`）可以让这个技能改用更便宜的 Claude 模型运行。
 
-系统提示词里只放技能的名称和描述;模型需要用到某个技能时会调用 `use_skill` 加载完整指示,而你输入 `/名称` 则会直接把内容附加进去。技能本质上就是提示词——导入别人的技能之前先读一遍。
+系统提示词里只放名称和说明；模型需要时会调用 `use_skill` 加载完整指令，你输入 `/名称` 则会直接附上。技能就是提示词——导入前请先读一遍。
 
 ## 安全与隐私
 
-**数据流向。** 你的浏览器只和一个地方通信:你配置的服务商或端点。一次请求包含你的消息、agent 读到的页面内容(或者只有你选中的部分,或 PDF)、你保存的记忆和技能名称。API 密钥、对话记录、记忆和技能只存在 `chrome.storage.local` 里。没有 Browser Agent 自己的服务器,没有数据分析,也没有远程代码。在你同意首次使用的数据说明之前,不会发送任何内容。完整细节见[隐私政策](store/privacy-policy.md)。
+**数据流向。** 发给模型的一次请求包含：你的消息、agent 读到的页面内容（或只有你选中的文字，或 PDF）、研究时各页面的摘要、你保存的记忆，以及技能名称。
 
-**哪些操作需要你点「允许」。** 下面这些操作会在侧边栏弹出确认卡片,你点「允许」之前不会执行。卡片存在于扩展程序自己的页面里,网页没法替你点击:
+- *Cloud 模式*会把这次请求发到 Browser Agent Cloud 服务器，由它转发给模型服务商，再把回复流式传回来。服务器会保存用量记录——一个任务用了哪个模型、多少 token、读了多少页面、搜索了几次、消耗了多少点数——用来计算点数。它不会保存你的消息、页面内容或模型的回复；如果模型服务商返回错误，那条错误信息可能会连同用量记录一起保留下来，用于排查问题。
+- *自己的密钥*会把请求从你的浏览器直接发给你的服务商。你的任务内容不会经过 Browser Agent 的服务器；唯一的接触是安装扩展时那一次匿名注册。
 
-- 看起来不可逆的点击和表单提交:按钮上可见的文字、`aria-label`、title 或 value 像是付款、购买、下单、删除、提交、发送、发布、授权、保存、分享、安装等含义的(覆盖全部 15 种界面语言);有多个字段或密码字段的表单;表单里只有图标的按钮;在不属于任何表单的字段里按回车(比如聊天框)。如果按钮的可见文字和 `aria-label` 对不上,卡片会给出警告;
-- 跳转到其他网站(无论是导航还是点链接),除非是任务开始时所在的网站、你在消息里提到过的网站,或者这次任务里已经允许过的网站。卡片会显示完整网址,包括查询字符串;
-- 在对话里已经出现网页内容(读过的页面、PDF、选中文字)之后再保存记忆。
+你的对话、记忆、技能、设置和 API 密钥只保存在 `chrome.storage.local` 里。没有数据分析，没有广告。在你同意首次启动时的数据说明之前，不会有任何内容发给模型。完整说明见[隐私政策](store/privacy-policy.md)。
 
-首页的建议一点击就会立即发送。这些根据页面生成的建议是在读取页面内容之后写出来的,所以页面内容可以影响它们:建议里提到的网站不算你自己指定的,它触发的操作仍然要过一遍同样的确认卡片。回复里的链接旁边会标出它真实指向的域名。
+**研究用的是你的浏览器。** 后台标签页会带着你的 cookie 和登录状态加载页面，就和你自己打开一样；PDF 由扩展程序直接下载，同样带着你的 cookie。搜索就是从你的浏览器发出的普通 Google（或 Bing）搜索，所以如果你已登录，这些搜索可能会保存进该账号的搜索历史。搜索关键词是模型根据你的问题写的。
 
-**输出和文件。** 模型的回复会先经过 DOMPurify 净化再渲染,图片、媒体、SVG、iframe、表单和行内样式都会被去掉,所以网页没法诱导模型用图片链接把你的对话内容泄露出去。生成的文件只限纯文本格式(`csv`、`json`、`md` 等),CSV/TSV 里看起来像电子表格公式开头的单元格会被中和处理。
+**哪些操作需要你按“允许”。** 下面这些操作会在侧边栏里弹出卡片，在你按下“允许”之前不会执行。卡片在扩展程序自己的页面里，网站没法替你点击：
 
-### 已知局限
+- 看起来不可逆的点击和表单提交：按钮的可见文字、`aria-label`、title 或 value 读起来像付款、购买、下单、删除、提交、发送、发布、授权、保存、分享、安装等等（15 种界面语言都会比对）；有多个输入框或带密码框的表单；表单里只有图标的按钮；在不属于表单的输入框里按回车（聊天框）。如果按钮的可见文字和 `aria-label` 对不上，卡片会提醒你；
+- 让你的标签页前往另一个网站（通过跳转或点击链接），除非它是任务开始时所在的网站、你在消息里提到的网站，或者在这次任务中你已经允许过的网站；
+- 在后台读取一个由 agent 自己拼出来的网址。不用问就能读的只有：与搜索结果、已读页面里的链接、你消息里的网址完全相同的网址，以及研究网站（GitHub、npm）。`localhost` 或局域网里的页面，除非网址是你自己输入的，否则不会读取；对于在后台标签页打开的页面，这一点还涵盖解析到本地地址的公网域名（PDF 只检查网址本身）；
+- 对话里已经出现网页内容（读过的页面、PDF、选中的文字）之后，要保存记忆。
 
-- **没有彻底解决 prompt injection 问题。** 这个 agent 是用你已登录的会话去读取并操作网站的。恶意页面有可能诱导它把你的对话、记忆或其他网站的数据发送出去,或者替你做一些事。上面提到的确认卡片覆盖了高风险操作,但不是完整的防护。
-- 打开着网银、邮箱、公司后台这类标签页时,不要让它处理不信任的页面;任务执行期间请留意它在做什么。
-- 高风险点击的判断靠的是关键词加表单形状的启发式规则,肯定会漏掉一些按钮。
-- 在同一个网站的输入框里打字不会触发确认。恶意页面可以读到 agent 输入的内容(比如通过监听 `input` 事件)并发送到自己的服务器。
-- 导入的 `SKILL.md` 等同于受信任的指令,只导入你读过的技能。
-- 记忆和对话在浏览器本地以明文存储,并且会随每次请求发送给你选择的服务商。
-- 单次任务最多执行 30 个工具步骤,每条回复都会显示 token 用量,所以失控的循环有明确上限,而且看得见。
+涉及网址的卡片会连同查询字符串一起显示，因为网址本身就可以把数据带出去；过长的网址会被截短，但会保留域名和查询字符串的开头。
+
+点击建议会直接发送。根据页面生成的建议是在读过页面内容之后写出来的，所以页面可能影响它：建议里提到的网站不算你指定的网站，它们触发的操作仍然要经过同样的卡片。回复里的链接会在文字旁边显示真实域名；来源列表会列出每个来源的域名。
+
+**输出与文件。** 模型的回复经过 DOMPurify 渲染。图片、媒体、SVG、iframe、表单和内联样式都会被去掉，所以网页没法诱导模型通过图片网址泄露你的对话。生成的文件只限纯文本格式（`csv`、`json`、`md`……），CSV/TSV 里以电子表格公式开头的单元格会被中和。
+
+### 已知限制
+
+- **提示词注入并没有被解决。** agent 会带着你的登录状态读很多不可信的页面。恶意页面可能试图诱导它把你的对话、记忆或其他网站的数据发到别处，或者替你做事。上面的确认卡片涵盖了高风险操作，但并不是完整的防护。少量数据仍可能通过 agent 选择跟随哪些链接、搜索什么而泄露。
+- 开着网银、邮箱或公司管理后台的标签页时，不要在不可信的页面上做研究或执行任务；任务进行期间请留意它在做什么。
+- 识别高风险点击靠的是关键词和表单形态的启发式规则，一定会漏掉一些按钮。
+- 在同一个网站内向输入框输入文字不会询问。恶意页面可以读到 agent 输入的内容（例如通过 `input` 监听器），再发到它自己的服务器。
+- 导入的 `SKILL.md` 会被当作可信指令。只导入你读过的技能。
+- 记忆和对话以未加密的形式保存在你的浏览器里，并随每次请求一起发给模型（经过 Browser Agent Cloud，或发给你自己的服务商）。
 
 ## 界面语言
 
-English、繁體中文、简体中文、日本語、한국어、Español、Français、Deutsch、Português (Brasil)、Italiano、Русский、Tiếng Việt、Bahasa Indonesia、ไทย、Türkçe。默认跟随浏览器语言,可以在**设置 → 语言**里切换。模型会用界面语言回答,除非你用其他语言提问。
+English、繁體中文、简体中文、日本語、한국어、Español、Français、Deutsch、Português (Brasil)、Italiano、Русский、Tiếng Việt、Bahasa Indonesia、ไทย、Türkçe。默认跟随浏览器；可以在**设置 → 语言**里更改。除非你用别的语言提问，否则模型会用你的界面语言回答。
 
 ## 开发
 
 ```bash
-npm run watch      # 保存后自动重新打包;之后在扩展程序卡片上点刷新
+npm run watch      # 保存后自动重新构建；然后在扩展卡片上点击重新加载
 npm run typecheck  # tsc --noEmit
-npm run check      # 单元自检:技能、记忆、历史、文件、服务商、i18n
-npm run test:e2e   # 构建后用 Playwright 加载扩展程序,模型接口用假数据模拟
+npm run check      # 单元自检：技能、记忆、历史、文件、服务商、安全、i18n
+npm run test:e2e   # 构建到 dist/e2e-ext，用 Playwright 运行；模型、后端、搜索和网站都是模拟的
 ```
 
-侧边栏用 React + TypeScript 写成,由 esbuild 打包进 `extension/`。没有后端:`src/agent.ts` 在侧边栏里运行 agent 循环,调用 Anthropic 走官方 SDK,其他兼容 OpenAI 的接口走 `src/providers.ts`。`src/tools.ts` 里的工具通过 `chrome.scripting` 在当前标签页里执行;`src/elements.ts` 负责生成编号元素列表和不可逆操作的判断。E2E 测试不需要密钥,也不产生费用。
+侧边栏是 React + TypeScript，由 esbuild 打包进 `extension/`。`src/agent.ts` 在侧边栏里运行 agent 循环：Cloud 模式下用官方 SDK 调用 Browser Agent Cloud 的 API（兼容 Anthropic，地址在构建时由 `BA_BACKEND` 决定）；用自己的密钥时，直接调用 Anthropic，或通过 `src/providers.ts` 调用任何 OpenAI 兼容的 API。`src/tools.ts` 里的工具通过 `chrome.scripting` 在当前标签页或后台标签页里执行；`src/elements.ts` 生成编号元素清单和不可逆操作的判断。e2e 测试不需要 API 密钥、不花钱，也不会访问真实的互联网。
 
-| 路径 | 作用 |
-|---|---|
-| `src/sidepanel.tsx` | 入口和主界面(引导流程、聊天、输入框、`/` 菜单) |
-| `src/agent.ts` | Agent 循环、设置加载、默认技能、历史记录的保存与恢复 |
-| `src/providers.ts` | 服务商列表和兼容 OpenAI 的适配器 |
-| `src/tools.ts` | 工具的具体实现(`runTool`)和确认门控 |
-| `src/shared.ts` | 系统提示词和工具定义 |
-| `src/elements.ts` | 编号可交互元素(`data-ba` refs)和风险判断 |
-| `src/log.tsx` | 聊天记录、卡片、用 DOMPurify 渲染 Markdown |
-| `src/pages.tsx` | 设置、历史记录和技能编辑器 |
-| `src/pdf.ts`、`src/viewer.ts` | PDF 文字提取和内置阅读器 |
-| `src/selection.ts` | 选中文字的标签 |
-| `src/skills.ts`、`src/memory.ts`、`src/history.ts`、`src/files.ts` | `SKILL.md` 解析、记忆、历史记录、文件卡片 |
-| `src/i18n/` | `t()` 函数和 15 份语言字典(`en.ts` 是唯一的真实来源) |
-| `extension/` | Manifest、`_locales/`、HTML、service worker——在 Chrome 里加载这个文件夹 |
-
-要新增一个工具:在 `src/shared.ts` 的 `tools` 里加上它的 schema,再在 `src/tools.ts` 的 `runTool` 里加一个 `case`。
+各文件的用途见英文版 [Development](README.md#development) 里的表格。新增工具：在 `src/shared.ts` 的 `tools` 里加上 schema，并在 `src/tools.ts` 的 `runTool` 里加一个 `case`。
 
 ### 翻译
 
-把 `src/i18n/locales/en.ts` 复制成比如 `nl.ts`,声明成 `const nl: Dict = { … }`,翻译每个字符串值(保留所有 `{placeholder}`),再把它加进 `src/i18n/index.ts` 的 `LANGS` 和加载表里。少了 key 或多了 key,`npm run typecheck` 会报错;placeholder 对不上,`npm run check` 会失败。发给模型的提示词和工具描述是故意只保留一种语言的。Chrome 网上应用店的名称和描述要放在 `extension/_locales/<code>/messages.json` 里(Chrome 用下划线,比如 `pt_BR`)。
+把 `src/i18n/locales/en.ts` 复制成比如 `nl.ts`，声明成 `const nl: Dict = { … }`，翻译字符串的值（保留每一个 `{placeholder}`），再把它加进 `src/i18n/index.ts` 里的 `LANGS` 和加载表。缺少或多出 key 时 `npm run typecheck` 会失败；placeholder 对不上时 `npm run check` 会失败。发给模型的提示词和工具描述是故意只保留一种语言的。Chrome 网上应用店的名称和说明放在 `extension/_locales/<code>/messages.json`（Chrome 用下划线，比如 `pt_BR`）。
 
 ## 参与贡献
 
-欢迎提 issue 和 PR,详见 [CONTRIBUTING.md](CONTRIBUTING.md)。PR 尽量保持小巧,跑一遍上面提到的三项检查,测试没覆盖到的部分请说明你是怎么手动测试的。
+欢迎提交 issue 和 PR，请见 [CONTRIBUTING.md](CONTRIBUTING.md)。PR 尽量小，跑一遍上面三项检查，对于它们没覆盖到的部分，请说明你是怎么测试的。
 
-## 许可协议
+## 许可证
 
-[MIT](LICENSE)。Browser Agent 是一个独立项目,与 Anthropic、OpenAI 或 Google 没有从属或背书关系。
+扩展程序采用 [MIT](LICENSE) 许可证。Browser Agent Cloud 是默认模式背后的可选托管服务，单独运营，不属于这个仓库。Browser Agent 是独立项目，与 Anthropic、OpenAI、Google 没有隶属关系。
 
 ---
 

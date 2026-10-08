@@ -1,4 +1,4 @@
 {
   "extName": { "message": "Browser Agent" },
-  "extDescription": { "message": "Converse com o Claude no painel lateral. Ele pode ler e operar a aba atual." }
+  "extDescription": { "message": "Um agente de IA no navegador que age na página que você está vendo: lê, clica, preenche formulários e pesquisa na web com fontes." }
 }

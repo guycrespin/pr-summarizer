@@ -1,4 +1,4 @@
 {
   "extName": { "message": "Browser Agent" },
-  "extDescription": { "message": "Mengobrol dengan Claude di panel samping. Claude dapat membaca dan mengoperasikan tab saat ini." }
+  "extDescription": { "message": "Agen AI di browser yang bekerja di halaman yang Anda lihat: membaca, mengeklik, mengisi formulir, dan riset web dengan sumber." }
 }

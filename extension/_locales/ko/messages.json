@@ -1,4 +1,4 @@
 {
   "extName": { "message": "Browser Agent" },
-  "extDescription": { "message": "사이드 패널에서 Claude와 대화하세요. 현재 탭을 읽고 조작할 수 있습니다." }
+  "extDescription": { "message": "브라우저 속 AI 에이전트가 보고 있는 사이트를 직접 다룹니다. 페이지 읽기, 클릭, 양식 작성, 출처가 있는 웹 리서치까지." }
 }

@@ -1,4 +1,4 @@
 {
   "extName": { "message": "Browser Agent" },
-  "extDescription": { "message": "Chatta con Claude nel pannello laterale. Può leggere e utilizzare la scheda attuale." }
+  "extDescription": { "message": "Agente IA nel browser che agisce sulla pagina che stai guardando: legge, clicca, compila moduli e fa ricerche sul web con fonti." }
 }

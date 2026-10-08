@@ -1,4 +1,4 @@
 {
   "extName": { "message": "Browser Agent" },
-  "extDescription": { "message": "在侧边栏与 Claude 对话，它能读取并操作当前标签页。" }
+  "extDescription": { "message": "放进浏览器的 AI agent，直接操作你正在看的网站：读页面、点击、填表，也能跨网站研究并附上来源。" }
 }

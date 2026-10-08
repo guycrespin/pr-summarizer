@@ -4,9 +4,10 @@
 
 # Browser Agent
 
-**Chrome'un yan panelinde çalışan, sekmenizi okuyup üzerinde işlem yapan bir AI ajanı — kendi API anahtarınızla veya kendi yerel modelinizle.**
+**Tarayıcınızda, baktığınız siteyle doğrudan çalışan bir AI ajanı. Sayfayı okur, tıklar, yazar ve sizin yerinize sayfalar arasında gezinir — tek sayfa yetmediğinde ise web genelinde araştırma yapıp kaynaklarıyla yanıt verir.**
 
 [![CI](https://github.com/Wadoekeani/browser-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Wadoekeani/browser-agent/actions/workflows/ci.yml)
+[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/iebcachfohpddakkmnopkpfnjibdlhai?label=Chrome%20Web%20Store&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/browser-agent/iebcachfohpddakkmnopkpfnjibdlhai)
 [![Release](https://img.shields.io/github/v/release/Wadoekeani/browser-agent)](https://github.com/Wadoekeani/browser-agent/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Chrome 122+](https://img.shields.io/badge/Chrome-122%2B-4285F4?logo=googlechrome&logoColor=white)
@@ -19,23 +20,29 @@
 
 ## Neden
 
-- **Zaten üzerinde olduğunuz sayfada çalışır.** Özetle, bir tablo çıkar, bir formu doldur veya birkaç sayfa arasında gezin — bir sohbet sekmesine kopyala-yapıştır yapmadan.
-- **Kendi modelinizi kullanın.** Anthropic, OpenAI, Gemini, OpenRouter veya OpenAI API'siyle konuşan herhangi bir şey — kendi makinenizdeki Ollama, LM Studio ve vLLM dahil.
-- **Arada sunucu yok.** İstekler tarayıcınızdan doğrudan seçtiğiniz sağlayıcıya gider. Anahtarınız, sohbetleriniz ve hafızalarınız yalnızca `chrome.storage.local`'da kalır. Analitik yok, hesap yok.
-- **Riskli işlemler sizi bekler.** Geri alınamaz görünen tıklamalar ve form gönderimleri, yan panelde *İzin ver*'e basana kadar durur. Bu kontrol modele nazikçe rica ederek değil, eklentinin kodu tarafından zorunlu kılınır.
+- **Zaten üzerinde olduğunuz sayfada çalışır.** Düz bir dille isteyin: bunu özetle, fiyatları bir tabloya çıkar, bu formu doldur, iptal ayarını bul. Sayfayı okur ve üzerinde işlem yapar — bir sohbet sekmesine kopyala-yapıştır yapmadan.
+- **Sayfayı sitenin kurduğu haliyle görür.** Model, sayfa metnini ve numaralandırılmış bir düğme, bağlantı ve alan listesini alır; ekran görüntüsünden tahmin etmek yerine `ref: 12` şeklinde tıklar. Yalnızca o hakkında soru sormak için bir paragraf seçin; PDF'ler de çalışır.
+- **Kaynaklarıyla araştırma yapabilir.** Yanıt bu sayfada olmadığında kendi tarayıcınızla arama yapar, birkaç sayfa okur, karşılaştırır ve her kaynağa geri bağlanan `[n]` atıflarıyla yanıt verir.
+- **Riskli işlemler sizi bekler.** Geri alınamaz görünen tıklamalar ve form gönderimleri ile ajanın kendi uydurduğu adreslerdeki sayfalar, siz *İzin ver*'e basana kadar durur. Bu kontrol modele nazikçe rica ederek değil, eklentinin kodu tarafından zorunlu kılınır.
+- **Ücretsiz başlayın ya da kendi anahtarınızı getirin.** Kurulumdan hemen sonra, aylık ücretsiz kredilerle ve kayıt gerektirmeden Browser Agent Cloud üzerinde çalışır. Kendi sağlayıcınızı mı tercih edersiniz? Ayarlar'da kendi API anahtarınıza geçin; istekler doğrudan tarayıcınızdan o sağlayıcıya gider.
 
 ## Özellikler
 
 **Sayfa üzerinde işlem yapma**
 - Araçlar: sayfayı okuma, tıklama, yazma (`<select>` açılır menüleri dahil), kaydırma, bir URL açma. Modele numaralandırılmış etkileşimli öğeler listesi verilir ve CSS seçicisi tahmin etmek yerine `ref: 12` şeklinde tıklar.
 - Sayfada metin seçip sadece onunla ilgili soru sorun; seçim, tüm sekme yerine mesajınıza eklenir.
-- PDF'ler: metin pdf.js ile çıkarılır. Yerleşik görüntüleyici, bir PDF'de tıpkı normal bir sayfada olduğu gibi metin seçmenizi sağlar. Taranmış PDF'ler (metin katmanı olmayan) maliyeti onayladıktan sonra bir belge olarak Anthropic'e gönderilebilir.
+- PDF'ler: metin pdf.js ile çıkarılır. Yerleşik görüntüleyici, bir PDF'de tıpkı normal bir sayfada olduğu gibi metin seçmenizi sağlar. Taranmış PDF'ler (metin katmanı olmayan) maliyeti onayladıktan sonra bir belge olarak Claude'a gönderilebilir.
+- Ana ekran: bulunduğunuz sayfaya göre öneriler.
+
+**Web genelinde araştırma**
+- Kendi tarayıcınızın arka plan sekmelerinde arama yapar ve sayfa okur; oturum açtığınız sayfalar da çalışır ve mevcut sekmenize dokunulmaz.
+- Her sayfa, sorunuz için önemli olana göre özetlenir; kaynaklar numaralandırılır, `[n]` atıfları tıklanabilir, kaynaklar konuşmayla birlikte kaydedilir ve dışa aktardığınızda dahil edilir.
+- Okuduğu sayfalardaki bağlantıları izler ve GitHub ile npm gibi araştırma sitelerine doğrudan gider; diğer adresler önce sorar.
 
 **Sohbet içinde**
-- Tablolar ve kod bloklarıyla akan Markdown yanıtları, ayrıca daraltılabilir düşünme özetleri (Anthropic).
+- Tablolar ve kod bloklarıyla akan Markdown yanıtları, ayrıca daraltılabilir düşünme özetleri.
 - Soru kartları (`ask_user`): model bir karar vermeye ihtiyaç duyduğunda, tahmin etmek yerine tıklanabilir seçeneklerle sorar.
 - Dosya kartları: sonuçlar indirilebilir `csv`, `json`, `md`, `txt`, `tsv`, `xml`, `yaml`, `ics` veya `vcf` dosyaları olarak, kopyalama ve önizlemeyle birlikte.
-- Her yanıt kendi token kullanımını gösterir; her görev 30 araç adımından sonra durur.
 
 **Size ait, saklanır**
 - Hafıza: "şunu hatırla …" deyin, sohbetler arasında sizinle ilgili kısa bilgileri saklar. Ayarlar'da görüntüleyin, düzenleyin veya kapatın.
@@ -50,7 +57,7 @@
     <td width="33%"><img src="docs/ask-user.png" alt="Biri önerilen üç seçenekli bir soru kartı"></td>
   </tr>
   <tr>
-    <td align="center">Bir sağlayıcı seçin</td>
+    <td align="center">Ya da kendi sağlayıcınızı kullanın</td>
     <td align="center">Beceriler için <code>/</code> yazın</td>
     <td align="center">Tahmin etmek yerine sorar</td>
   </tr>
@@ -58,16 +65,34 @@
 
 <img src="docs/pdf-viewer.png" alt="Seçili bir cümleyle yerleşik PDF görüntüleyici, ve onu açıklayan yan panel">
 
+## Araştırma nasıl çalışır
+
+Mevcut sayfanın yanıtlayamayacağı bir şey sorun — "2026'da hangi React durum kütüphanesini kullanmalıyım?" — ve ajan araştırır:
+
+1. **Arama.** Arka plan sekmesinde bir arama açar (Google; Google insan olduğunuzu doğrulamanızı isterse Bing'e geçer), başlıkları, bağlantıları ve özetleri okur, sonra sekmeyi kapatır. Arama sekmesi ancak ikisi de doğrulama isterse öne gelir, böylece siz çözebilirsiniz; ardından araştırma kendiliğinden devam eder.
+2. **Okuma.** En ilgili sonuçları arka plan sekmelerinde açar — aynı anda en fazla dört — ve ana metni çıkarır. Mevcut sekmenize hiçbir zaman dokunulmaz.
+3. **Özetleme.** Her sayfa, küçük ve hızlı bir model (Claude Haiku) tarafından sorunuz için önemli olan noktalara, alıntılara ve tarihlere indirilir; böylece yirmi sayfa ne konuşmayı ne de faturanızı şişirir.
+4. **Yanıt.** Önce sonucu, ardından bir karşılaştırma tablosunu, gerekçeli bir öneriyi ve kaynakların çözmediği noktaları alırsınız. Arama sonuçları ve okunan sayfalar numaralandırılır: yanıttaki `[n]` bir bağlantıdır ve atıf yapılan kaynaklar yanıtın altında listelenir.
+
+Her adımı yan panelde izleyebilir ve istediğiniz an durdurabilirsiniz. Bir görev en fazla 40 adım atar ve en fazla 30 sayfa okur.
+
 ## Hızlı başlangıç
 
-Browser Agent henüz Chrome Web Store'da değil (yakında geliyor). O zamana kadar, sürüm build'ini kurun — Node.js veya build adımına gerek yok. Chrome 122+ gerektirir.
+Chrome 122+ gerektirir.
+
+1. **[Browser Agent'ı Chrome Web Store'dan yükleyin](https://chromewebstore.google.com/detail/browser-agent/iebcachfohpddakkmnopkpfnjibdlhai)** — **Chrome'a ekle**'ye tıklayın. Kendini otomatik günceller.
+2. Yan paneli açmak için araç çubuğu simgesine tıklayın (görünmüyor mu? bulmaca parçası simgesindeki menüden sabitleyin) ve kısa veri bildirimini kabul edin.
+3. Üzerinde olduğunuz sayfa hakkında soru sorun — ya da bir şeyi araştırmasını isteyin. Anahtar ya da hesap gerekmez.
+
+### Release zip'inden yükleme
+
+Yeni bir sürüm incelemeyi beklerken Release'ler mağazadaki sürümün önünde olabilir. Node.js veya build adımına gerek yok.
 
 1. [En son sürümden](https://github.com/Wadoekeani/browser-agent/releases/latest) `browser-agent-<version>.zip` dosyasını indirin ve açın.
-2. `chrome://extensions` sayfasını açın ve **Developer mode**'u (Geliştirici modu, sağ üstte) etkinleştirin.
-3. **Load unpacked**'e (Paketlenmemiş öğe yükle) tıklayın ve açtığınız klasörü seçin.
-4. Yan paneli açmak için araç çubuğu simgesine tıklayın, kısa veri bildirimini kabul edin, bir sağlayıcı seçin ve bir anahtar (veya yerel bir endpoint) yapıştırın.
+2. `chrome://extensions` sayfasını açın ve **Geliştirici modu**nu (sağ üstte) etkinleştirin.
+3. **Paketlenmemiş öğe yükle**'ye tıklayın ve açtığınız klasörü seçin, ardından yukarıdaki 2. adımdan devam edin.
 
-Güncellemek için yeni zip dosyasını indirin, aynı klasörün içeriğini değiştirin ve eklenti kartındaki yeniden yükle simgesine tıklayın. Ayarlarınız, sohbetleriniz ve hafızalarınız korunur. Farklı bir klasörden yüklemek, boş başlayan ayrı bir kopya kurar.
+Güncellemek için yeni zip dosyasını indirin, aynı klasörün içeriğini değiştirin ve eklenti kartındaki yeniden yükle simgesine tıklayın. Ayarlarınız, sohbetleriniz ve hafızalarınız korunur. Farklı bir klasörden yüklemek, boş başlayan ayrı bir kopya kurar — mağaza sürümü de öyle.
 
 ### Kaynaktan build alma
 
@@ -80,24 +105,36 @@ npm ci
 npm run build
 ```
 
-Ardından `extension/` klasörünü 3. adımdaki gibi **Load unpacked** ile yükleyin.
+Ardından `extension/` klasörünü 3. adımdaki gibi **Paketlenmemiş öğe yükle** ile yükleyin. Build sırasında `BA_BACKEND` ayarlamazsanız, kaynaktan build edilen sürüm `http://localhost:4410` adresindeki bir Browser Agent Cloud sunucusuyla konuşur; bu yüzden kendi API anahtarınızı kullanın (aşağıda) ya da kendi çalıştırdığınız bir arka uca yönlendirin.
 
-## Sağlayıcılar
+## Çalıştırmanın iki yolu
+
+| | Browser Agent Cloud (varsayılan) | Kendi API anahtarınız |
+|---|---|---|
+| Kurulum | Yok — kurulumdan hemen sonra çalışır | **Ayarlar → Kendi API anahtarınızı kullanın (gelişmiş)**, ardından bir anahtar veya yerel bir endpoint yapıştırın |
+| Hesap | Yok; kurulumda anonim bir cihaz kimliği oluşturulur | Yok |
+| Modeller | Claude Sonnet, Opus ve Haiku (5.5) | Sağlayıcınızın sunduğu her şey |
+| Maliyet | Aylık ücretsiz krediler; daha fazlası için ücretli planlar (ödeme Paddle ile) | Sağlayıcınız tarafından faturalandırılır; eklenti ücretsizdir |
+| İstekler nereye gider | Browser Agent Cloud sunucusu üzerinden model sağlayıcısına | Tarayıcınızdan doğrudan sağlayıcınıza |
+
+**Krediler.** Cloud modunda her görev (gönderdiğiniz bir mesaj, ajan duruncaya kadar) modele, düşünme derinliğine ve her sayfanın ne kadarını okuduğuna göre belirlenen sabit sayıda kredi harcar. Yan panel, göndermeden önce tahmini, her görevden sonra da kalan kredileri gösterir. Krediler bittiğinde görevler bir sonraki aya kadar ya da yükseltme yapana kadar duraklar.
+
+**Kendi anahtarınız.** Bu sağlayıcılar çalışır; araç çağırmayı destekleyen bir model seçin, yoksa ajan sayfa üzerinde işlem yapamaz.
 
 | Sağlayıcı | İhtiyacınız olan | Notlar |
 |---|---|---|
-| Anthropic | [API anahtarı](https://console.anthropic.com/settings/keys) | Sonnet 5, Opus 5, Haiku 4.5; effort seçici; düşünme özetleri; taranmış PDF'ler |
+| Anthropic | [API anahtarı](https://console.anthropic.com/settings/keys) | Sonnet 5.5, Opus 5.5, Haiku 5.5; düşünme derinliği; düşünme özetleri; taranmış PDF'ler; araştırmada sayfa başına özet |
 | OpenAI | [API anahtarı](https://platform.openai.com/api-keys) | Model listesi sağlayıcıdan çekilir |
 | Google Gemini | [API anahtarı](https://aistudio.google.com/apikey) | Gemini'nin OpenAI uyumlu endpoint'ini kullanır |
 | OpenRouter | [API anahtarı](https://openrouter.ai/keys) | OpenRouter'daki araç kullanabilen herhangi bir model |
 | Özel (OpenAI uyumlu) | Base URL, anahtar isteğe bağlı | Ollama, LM Studio, vLLM, llama.cpp — `/chat/completions` olan her şey |
 
+Anthropic dışındaki sağlayıcılarda araştırma, her sayfayı Haiku özeti yerine ham metin olarak okur; bu da daha fazla token harcar.
+
 Yerel sunucular varsayılan olarak tarayıcı eklentilerini engeller:
 
 - **Ollama:** `OLLAMA_ORIGINS=chrome-extension://*` ayarlayın ve Ollama'yı yeniden başlatın (macOS: `launchctl setenv OLLAMA_ORIGINS "chrome-extension://*"`). Base URL: `http://localhost:11434/v1`.
 - **LM Studio:** sunucuyu CORS açık olarak başlatın, `lms server start --cors`. Base URL: `http://localhost:1234/v1`.
-
-Araç çağırmayı destekleyen bir model seçin; ajan bu olmadan sayfa üzerinde işlem yapamaz. Kullanım sağlayıcınız tarafından faturalandırılır; eklenti ücretsizdir.
 
 ## Beceriler
 
@@ -118,7 +155,7 @@ Bir tanesini seçmek için mesaj kutusuna `/` yazın, ya da uygun olduğunda mod
 | `/decide` | Seçenekleri ortaya koyar, ihtiyaçlarınızı birer birer sorar, sonra birini önerir |
 | `/grill-me` | Planınızı (veya sayfadaki teklifi) her seferinde bir çoktan seçmeli soruyla test eder |
 
-`/clear` yeni bir konuşma başlatır.
+`/clear` yeni bir konuşma başlatır. Araştırma için komut gerekmez — sadece isteyin.
 
 ### Kendi becerinizi yazın
 
@@ -134,66 +171,59 @@ description: Turn a meeting page into decisions, action items and owners
 2. List decisions, then a table of action items with owner and due date.
 ```
 
-Becerileri **Settings → Skills**'de (Ayarlar → Beceriler) yönetin: oluşturun, düzenleyin, `.md` dosyaları içe aktarın, dışa aktarın. Claude Code'un `SKILL.md` dosyaları olduğu gibi içe aktarılır. İsteğe bağlı bir `model:` satırı (örneğin `model: haiku`), Anthropic kullandığınızda o beceriyi daha ucuz bir Claude modelinde çalıştırır.
+Becerileri **Ayarlar → Beceriler**'de yönetin: oluşturun, düzenleyin, `.md` dosyaları içe aktarın, dışa aktarın. Claude Code'un `SKILL.md` dosyaları olduğu gibi içe aktarılır. İsteğe bağlı bir `model:` satırı (örneğin `model: haiku`), o beceriyi daha ucuz bir Claude modelinde çalıştırır.
 
 Sistem prompt'una yalnızca isimler ve açıklamalar girer; model, ihtiyaç duyduğunda tam talimatları yüklemek için `use_skill`'i çağırır, `/isim` yazmak ise onları doğrudan ekler. Beceriler birer prompt'tur — içe aktarmadan önce okuyun.
 
 ## Güvenlik ve gizlilik
 
-**Veri akışı.** Tarayıcınız yalnızca tek bir yerle konuşur: yapılandırdığınız sağlayıcı veya endpoint. Bir istek; mesajlarınızı, ajanın okuduğu sayfa içeriğini (veya sadece seçiminizi, ya da PDF'i), kayıtlı hafızalarınızı ve beceri adlarınızı içerir. API anahtarınız, konuşmalarınız, hafızalarınız ve becerileriniz yalnızca `chrome.storage.local`'da saklanır. Bir Browser Agent sunucusu, analitik veya uzak kod yoktur. İlk çalıştırma veri bildirimini kabul etmeden hiçbir şey gönderilmez. Tam ayrıntılar: [gizlilik politikası](store/privacy-policy.md).
+**Veri akışı.** Modele giden bir istek; mesajlarınızı, ajanın okuduğu sayfa içeriğini (veya sadece seçiminizi, ya da PDF'i), araştırdığı sayfaların özetlerini, kayıtlı hafızalarınızı ve beceri adlarınızı içerir.
+
+- *Cloud modu* bu isteği Browser Agent Cloud sunucusuna gönderir; sunucu onu model sağlayıcısına iletir ve yanıtı akış olarak geri verir. Sunucu, kredileri saymak için kullanım kayıtları tutar — bir görevin hangi modeli, kaç token, sayfa, arama ve krediyi kullandığı. Mesajlarınızı, sayfa içeriğini veya modelin yanıtlarını saklamaz; model sağlayıcısı bir hata döndürürse, o hata mesajı hata ayıklama için kullanım kaydıyla birlikte tutulabilir.
+- *Kendi anahtarınız* istekleri doğrudan tarayıcınızdan sağlayıcınıza gönderir. Görevlerinizle ilgili hiçbir şey Browser Agent'ın sunucularına gitmez; tek temas, eklenti kurulduğunda yapılan anonim kayıttır.
+
+Konuşmalarınız, hafızalarınız, becerileriniz, ayarlarınız ve her türlü API anahtarı yalnızca `chrome.storage.local`'da saklanır. Analitik yok, reklam yok. İlk çalıştırma veri bildirimini kabul etmeden bir modele hiçbir şey gönderilmez. Tam ayrıntılar: [gizlilik politikası](store/privacy-policy.md).
+
+**Araştırma tarayıcınızı kullanır.** Arka plan sekmeleri sayfaları sizin çerezlerinizle ve oturumlarınızla yükler, tıpkı kendiniz açmışsınız gibi; PDF'leri eklentinin kendisi doğrudan indirir, yine çerezlerinizle. Aramalar tarayıcınızdan yapılan sıradan Google (veya Bing) aramalarıdır; bu yüzden oturum açtıysanız o hesabın arama geçmişine kaydedilebilirler. Arama anahtar kelimelerini model, sorunuzdan yazar.
 
 ***İzin ver*'inizi gerektiren şeyler.** Bu işlemler yan panelde bir kart gösterir ve siz *İzin ver*'e basana kadar çalışmaz. Kart, bir web sitesinin sizin adınıza tıklayamayacağı, eklentinin kendi sayfasında bulunur:
 
 - geri alınamaz görünen tıklamalar ve form gönderimleri: düğmenin görünür metni, `aria-label`'ı, title'ı veya value'su öde, satın al, sipariş ver, sil, gönder, yayınla, yetkilendir, kaydet, paylaş, yükle ve benzerleri gibi okunuyorsa (15 arayüz dilinin tümünde); birden fazla alanı veya bir şifre alanı olan bir form; bir form içindeki yalnızca simgeli bir düğme; bir form içinde olmayan bir alanda (sohbet kutuları) Enter'a basmak. Bir düğmenin görünür metni ile `aria-label`'ı uyuşmuyorsa, kart sizi uyarır;
-- görevin başladığı site, mesajınızda belirttiğiniz bir site veya bu görevde zaten izin verdiğiniz bir site olmadıkça, gezinerek veya bir bağlantıya tıklayarak başka bir siteye gitmek. Kart, sorgu dizesi dahil tam URL'yi gösterir;
+- görevin başladığı site, mesajınızda belirttiğiniz bir site veya bu görevde zaten izin verdiğiniz bir site olmadıkça, sekmenizde gezinerek veya bir bağlantıya tıklayarak başka bir siteye gitmek;
+- adresini ajanın kendisinin oluşturduğu bir sayfayı arka planda okumak. Sormadan yalnızca arama sonuçlarındaki, daha önce okuduğu sayfalardaki bağlantıların, mesajınızdaki adreslerin ve araştırma sitelerinin (GitHub, npm) birebir aynı adreslerini okur. `localhost` veya yerel ağınızdaki sayfalar, adresi siz yazmadıkça okunmaz; arka plan sekmesinde açılan sayfalar için bu, yerel bir adrese çözümlenen genel alan adlarını da kapsar (PDF'lerde yalnızca adresin kendisi denetlenir);
 - konuşma web içeriği içerdiğinde (okuduğu bir sayfa, bir PDF, bir seçim) bir hafıza kaydetmek.
 
-Bir öneriye tıklamak onu hemen gönderir. Sayfadan üretilen öneriler sayfa içeriği okunduktan sonra yazılır, dolayısıyla bir sayfa bunları etkileyebilir: bahsettikleri siteler sizin belirttiğiniz siteler sayılmaz ve tetikledikleri şey yine aynı onay kartlarından geçer. Yanıtlardaki bağlantılar metnin yanında gerçek alan adlarını gösterir.
+Bir adres içeren kartlar onu sorgu dizesiyle birlikte gösterir, çünkü bir adres veriyi dışarı taşıyabilir; çok uzun adresler kısaltılır, alan adı ve sorgu dizesinin başı korunur.
+
+Bir öneriye tıklamak onu hemen gönderir. Sayfadan üretilen öneriler sayfa içeriği okunduktan sonra yazılır, dolayısıyla bir sayfa bunları etkileyebilir: bahsettikleri siteler sizin belirttiğiniz siteler sayılmaz ve tetikledikleri şey yine aynı kartlardan geçer. Yanıtlardaki bağlantılar metnin yanında gerçek alan adlarını gösterir; kaynak listesi her kaynağın alan adını gösterir.
 
 **Çıktı ve dosyalar.** Model yanıtları DOMPurify ile render edilir. Görseller, medya, SVG, iframe'ler, formlar ve satır içi stiller çıkarılır, böylece bir sayfa modeli bir görsel URL'si üzerinden konuşmanızı sızdırmaya zorlayamaz. Üretilen dosyalar yalnızca düz metin formatlarıdır (`csv`, `json`, `md`, …) ve bir e-tablo formülü gibi başlayan CSV/TSV hücreleri etkisiz hale getirilir.
 
 ### Bilinen sınırlamalar
 
-- **Prompt injection çözülmüş değildir.** Ajan, oturum açtığınız web sitelerini okur ve üzerinde işlem yapar. Kötü niyetli bir sayfa, konuşmanızı, hafızalarınızı veya diğer sitelerden gelen verileri bir yere göndermesi ya da sizin adınıza bir şeyler yapması için onu yönlendirmeye çalışabilir. Onay kartları yukarıdaki yüksek riskli işlemleri kapsar; bunlar tam bir koruma değildir.
-- Bankanız, e-postanız veya şirket yönetici panelinizle ilgili sekmeler açıkken güvenilmeyen sayfalarda çalıştırmayın ve bir görev çalışırken onu izleyin.
-- Riskli tıklamaları tespit etmek anahtar kelime ve form şekli sezgisine dayanır. Bazı düğmeleri kaçırabilir.
+- **Prompt injection çözülmüş değildir.** Ajan, oturum açtığınız hesabınızla güvenilmeyen birçok sayfayı okur. Kötü niyetli bir sayfa, konuşmanızı, hafızalarınızı veya diğer sitelerden gelen verileri bir yere göndermesi ya da sizin adınıza bir şeyler yapması için onu yönlendirmeye çalışabilir. Kartlar yukarıdaki yüksek riskli işlemleri kapsar; tam bir koruma değildir. Ajanın hangi bağlantıları izlemeyi seçtiği veya neyi aradığı üzerinden yine de az miktarda veri sızabilir.
+- Bankanız, e-postanız veya şirket yönetici panelinizle ilgili sekmeler açıkken güvenilmeyen sayfalarda araştırma yapmayın ya da görev çalıştırmayın ve bir görev çalışırken ajanı izleyin.
+- Riskli tıklamaları tespit etmek anahtar kelime ve form şekli sezgisine dayanır. Bazı düğmeleri kaçıracaktır.
 - Aynı sitedeki bir alana yazmak sormaz. Kötü niyetli bir sayfa, ajanın yazdıklarını okuyabilir (örneğin bir `input` dinleyicisiyle) ve kendi sunucusuna gönderebilir.
 - İçe aktarılan bir `SKILL.md`, güvenilir talimatlardır. Yalnızca okuduğunuz becerileri içe aktarın.
-- Hafızalar ve konuşmalar tarayıcınızda şifrelenmeden saklanır ve her isteğin parçası olarak seçtiğiniz sağlayıcıya gönderilir.
-- Her görev 30 araç adımından sonra durur ve her yanıt kendi token kullanımını gösterir, böylece kontrolden çıkan bir döngü sınırlı ve görünür kalır.
+- Hafızalar ve konuşmalar tarayıcınızda şifrelenmeden saklanır ve her istekle birlikte modele gönderilir (Browser Agent Cloud üzerinden veya kendi sağlayıcınıza).
 
 ## Diller
 
-English, 繁體中文, 简体中文, 日本語, 한국어, Español, Français, Deutsch, Português (Brasil), Italiano, Русский, Tiếng Việt, Bahasa Indonesia, ไทย, Türkçe. Varsayılan, tarayıcınızı takip eder; **Settings → Language**'den (Ayarlar → Dil) değiştirin. Model, siz başka bir dilde yazmadıkça arayüz dilinizde yanıt verir.
+English, 繁體中文, 简体中文, 日本語, 한국어, Español, Français, Deutsch, Português (Brasil), Italiano, Русский, Tiếng Việt, Bahasa Indonesia, ไทย, Türkçe. Varsayılan, tarayıcınızı takip eder; **Ayarlar → Dil**'den değiştirin. Model, siz başka bir dilde yazmadıkça arayüz dilinizde yanıt verir.
 
 ## Geliştirme
 
 ```bash
 npm run watch      # rebuild on save; then click reload on the extension card
 npm run typecheck  # tsc --noEmit
-npm run check      # unit self-checks: skills, memory, history, files, providers, i18n
-npm run test:e2e   # builds, loads the extension in Playwright against mocked model APIs
+npm run check      # unit self-checks: skills, memory, history, files, providers, security, i18n
+npm run test:e2e   # builds into dist/e2e-ext and runs it in Playwright against mocked model, backend, search and websites
 ```
 
-Yan panel, esbuild tarafından `extension/` içine paketlenen React + TypeScript'tir. Arka uç yoktur: `src/agent.ts`, yan panelde ajan döngüsünü çalıştırır, Anthropic'i resmi SDK üzerinden veya `src/providers.ts` aracılığıyla OpenAI uyumlu herhangi bir API'yi çağırır. `src/tools.ts` içindeki araçlar, `chrome.scripting` ile aktif sekmede çalışır; `src/elements.ts`, numaralandırılmış öğe listesini ve geri alınamaz işlem kontrolünü oluşturur. e2e test paketi bir API anahtarına ihtiyaç duymaz ve hiçbir şey harcamaz.
+Yan panel, esbuild tarafından `extension/` içine paketlenen React + TypeScript'tir. `src/agent.ts`, ajan döngüsünü yan panelde çalıştırır: Cloud modunda resmi SDK ile Browser Agent Cloud API'sini (Anthropic uyumlu, adresi build sırasında `BA_BACKEND` belirler) çağırır; kendi anahtarınızla Anthropic'i doğrudan veya `src/providers.ts` aracılığıyla OpenAI uyumlu herhangi bir API'yi çağırır. `src/tools.ts` içindeki araçlar, `chrome.scripting` ile aktif sekmede veya arka plan sekmelerinde çalışır; `src/elements.ts`, numaralandırılmış öğe listesini ve geri alınamaz işlem kontrolünü oluşturur. e2e test paketi bir API anahtarına ihtiyaç duymaz, hiçbir şey harcamaz ve gerçek internete istek yapmaz.
 
-| Yol | Ne için |
-|---|---|
-| `src/sidepanel.tsx` | Giriş noktası ve ana UI (onboarding, sohbet, mesaj kutusu, `/` menüsü) |
-| `src/agent.ts` | Ajan döngüsü, ayarların yüklenmesi, varsayılan beceriler, geçmişi kaydetme/geri yükleme |
-| `src/providers.ts` | Sağlayıcı listesi ve OpenAI uyumlu adaptör |
-| `src/tools.ts` | Araç uygulamaları (`runTool`) ve onay kapısı |
-| `src/shared.ts` | Sistem prompt'u ve araç tanımları |
-| `src/elements.ts` | Numaralandırılmış etkileşimli öğeler (`data-ba` referansları) ve risk kontrolü |
-| `src/log.tsx` | Sohbet günlüğü, kartlar, DOMPurify ile Markdown render'ı |
-| `src/pages.tsx` | Ayarlar, geçmiş ve beceri düzenleyici |
-| `src/pdf.ts`, `src/viewer.ts` | PDF metin çıkarma ve yerleşik görüntüleyici |
-| `src/selection.ts` | Seçili metin çipi |
-| `src/skills.ts`, `src/memory.ts`, `src/history.ts`, `src/files.ts` | `SKILL.md` ayrıştırma, hafıza, geçmiş, dosya kartları |
-| `src/i18n/` | `t()` ve 15 sözlük (`en.ts` referans kaynaktır) |
-| `extension/` | Manifest, `_locales/`, HTML, service worker — bu klasörü Chrome'a yükleyin |
-
-Bir araç eklemek için: şemasını `src/shared.ts` içindeki `tools`'a ve `src/tools.ts` içindeki `runTool`'a bir `case` ekleyin.
+Her dosyanın ne işe yaradığı için İngilizce sürümdeki [Development](README.md#development) bölümündeki tabloya bakın. Bir araç eklemek için: şemasını `src/shared.ts` içindeki `tools`'a ve `src/tools.ts` içindeki `runTool`'a bir `case` ekleyin.
 
 ### Çeviri yapmak
 
@@ -205,7 +235,7 @@ Issue'lar ve PR'lar memnuniyetle karşılanır — bkz. [CONTRIBUTING.md](CONTRI
 
 ## Lisans
 
-[MIT](LICENSE). Browser Agent bağımsız bir projedir, Anthropic, OpenAI veya Google ile bağlantılı değildir.
+Eklenti [MIT](LICENSE) lisanslıdır. Varsayılan modun arkasındaki isteğe bağlı barındırılan hizmet olan Browser Agent Cloud ayrıca işletilir ve bu deponun parçası değildir. Browser Agent bağımsız bir projedir, Anthropic, OpenAI veya Google ile bağlantılı değildir.
 
 ---
 

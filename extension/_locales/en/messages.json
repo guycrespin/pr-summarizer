@@ -1,4 +1,4 @@
 {
   "extName": { "message": "Browser Agent" },
-  "extDescription": { "message": "Chat with Claude in the side panel. It can read and operate the current tab." }
+  "extDescription": { "message": "An AI agent in your browser that works on the page you're viewing: reads, clicks, fills forms and researches the web with sources." }
 }

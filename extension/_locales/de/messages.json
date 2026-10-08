@@ -1,4 +1,4 @@
 {
   "extName": { "message": "Browser Agent" },
-  "extDescription": { "message": "Chatte mit Claude im Seitenpanel. Er kann den aktuellen Tab lesen und bedienen." }
+  "extDescription": { "message": "KI-Agent im Browser, der direkt auf der geöffneten Seite arbeitet: liest, klickt, füllt Formulare aus und recherchiert mit Quellen." }
 }
