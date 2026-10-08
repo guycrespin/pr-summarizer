@@ -10,6 +10,7 @@ export type Me = {
   account?: { provider: Provider; email: string | null } | null; // 登入的帳號；null＝匿名（舊版後端沒有）
   models?: CloudModel[]; default_model?: string; // cloud 的模型選單來源（舊版後端沒有）
   read_levels?: ReadLevel[]; default_read_chars?: number; // cloud 的讀頁字數檔位（舊版後端沒有）
+  search_credits?: number; // 任務中每次外部搜尋加幾點（舊版後端沒有）
 };
 
 export type Provider = "google" | "github";

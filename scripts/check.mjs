@@ -248,6 +248,19 @@ import { S } from "../src/store";
 }
 console.log("cloud-read-levels: all checks passed");
 
+// ---------- cloud 送出前預估：模型×深度＋讀頁加點；會再加點時標「至少」 ----------
+import { estimateCredits } from "../src/cloud-models";
+{
+  const base = { models: [{ id: "claude-sonnet-5-5", label: "Sonnet", tier: "balanced", credits: 3, effort_credits: { low: 2, medium: 3, high: 5, xhigh: 7, max: 10 }, locked: false }], default_model: "claude-sonnet-5-5",
+    read_levels: [{ chars: 8000, credits: 0 }, { chars: 30000, credits: 2 }, { chars: 100000, credits: 0, chars_per_credit: 10000 }], default_read_chars: 8000 };
+  assert.equal(estimateCredits(null, undefined, "medium", 8000), null);
+  assert.deepEqual(estimateCredits(base, undefined, "max", 30000), { n: 12, min: false }, "固定檔、後端沒給 search_credits（舊版）：確定值");
+  assert.deepEqual(estimateCredits(base, undefined, "medium", 100000), { n: 3, min: true }, "動態檔：至少");
+  assert.deepEqual(estimateCredits({ ...base, search_credits: 1 }, undefined, "low", 8000), { n: 2, min: true }, "搜尋會加點：至少");
+  for (const x of [0, -1, "x", null]) assert.equal(estimateCredits({ ...base, search_credits: x }, undefined, "low", 8000).min, false, `search_credits=${x}`);
+}
+console.log("cloud-estimate: all checks passed");
+
 // ---------- 模式：全新安裝 cloud；升級前設定過金鑰或自訂位址的舊使用者維持 byok ----------
 import { defaultSuggestOn, detectMode } from "../src/mode";
 {

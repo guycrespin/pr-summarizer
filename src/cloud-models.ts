@@ -55,8 +55,9 @@ export function cloudReadLevels(
 }
 
 // 送出前預估這個任務的點數（只有 cloud）：目前模型在目前深度的點數（沒有 effortCredits 就用 credits）＋讀頁檔的加點。
-// min＝選了動態檔（每讀滿 chars_per_credit 字再加 1 點），所以只是「至少」。還沒拿到 /v1/me 或模型沒有點數資料 → null
-export function estimateCredits(me: Parameters<typeof cloudModels>[0] & Parameters<typeof cloudReadLevels>[0], savedModel: string | undefined, effort: string, savedChars: number): { n: number; min: boolean } | null {
+// min＝之後還可能加點，所以只是「至少」：選了動態檔（每讀滿 chars_per_credit 字再加 1 點），或後端對外部搜尋加點（search_credits > 0）。
+// 還沒拿到 /v1/me 或模型沒有點數資料 → null
+export function estimateCredits(me: (Parameters<typeof cloudModels>[0] & Parameters<typeof cloudReadLevels>[0] & { search_credits?: number }) | null, savedModel: string | undefined, effort: string, savedChars: number): { n: number; min: boolean } | null {
   if (!me) return null;
   const m = cloudModels(me, savedModel);
   const item = m.items.find((i) => i.value === m.model);
@@ -64,5 +65,5 @@ export function estimateCredits(me: Parameters<typeof cloudModels>[0] & Paramete
   if (base == null) return null;
   const r = cloudReadLevels(me, savedChars);
   const level = r.levels.find((l) => l.chars === r.chars);
-  return { n: base + (level?.credits ?? 0), min: !!level?.chars_per_credit };
+  return { n: base + (level?.credits ?? 0), min: !!level?.chars_per_credit || Number(me.search_credits) > 0 };
 }
