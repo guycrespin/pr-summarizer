@@ -38,7 +38,7 @@ export const S = {
   providers: {} as Partial<Record<ProviderId, ProviderConf>>, // 各供應商的金鑰、base URL、模型；見 providers.ts
   me: null as Me | null, // GET /v1/me（只有 cloud）：方案與本月點數；null＝還沒抓到（或抓失敗）
   meError: false,
-  effort: "high",
+  effort: "medium",
   pageChars: 8000, // 讀頁一次最多回傳的字數。中文約 1 字 1 token：整頁維基 5.5 萬字＝5 萬 token，一次摘要就要好幾塊台幣
   suggestOn: false,
   memoryOn: true,

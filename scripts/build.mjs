@@ -3,10 +3,12 @@
 import * as esbuild from "esbuild";
 import { cpSync, rmSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const pdfjs = `${root}node_modules/pdfjs-dist/`;
-const ext = `${root}extension/`;
+// BA_OUTDIR：e2e 把建置輸出到 dist/e2e-ext（它先自己複製靜態檔），不碰使用者平常載入的 extension/；沒設＝照舊 extension/
+const ext = process.env.BA_OUTDIR ? `${resolve(process.env.BA_OUTDIR)}/` : `${root}extension/`;
 
 rmSync(`${ext}chunks`, { recursive: true, force: true }); // 舊 hash 的 chunk 不留
 cpSync(`${pdfjs}build/pdf.worker.min.mjs`, `${ext}pdfjs/pdf.worker.min.mjs`);

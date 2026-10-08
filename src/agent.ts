@@ -84,7 +84,7 @@ function streamBlock(type: string) {
 }
 
 // Anthropic：官方 SDK 串流，保留自適應思考、effort、快取
-type TurnParams = { system: string; tools: typeof tools; model: string; noTools: boolean; signal: AbortSignal; cloud: boolean; headers?: Record<string, string> }; // headers：只有 cloud 才有（x-ba-*）
+type TurnParams = { system: string; tools: typeof tools; model: string; effort: string; noTools: boolean; signal: AbortSignal; cloud: boolean; headers?: Record<string, string> }; // headers：只有 cloud 才有（x-ba-*）
 async function anthropicTurn(p: TurnParams): Promise<Turn> {
   let block: ReturnType<typeof streamBlock> = null;
   const stream = (await makeClient(p.cloud)).beta.messages.stream(
@@ -94,7 +94,7 @@ async function anthropicTurn(p: TurnParams): Promise<Turn> {
       // Sonnet 5.5 / Opus 5.5：自適應思考＋effort；預設不回傳思考內容，summarized 才看得到摘要。Haiku 不開（5.5 其實支援，維持不開比較省）
       ...(isHaiku(p.model) ? {} : {
         thinking: { type: "adaptive", display: "summarized" },
-        output_config: { effort: S.effort as any },
+        output_config: { effort: p.effort as any },
       }),
       // 頂層 cache_control：自動把最後一個可快取區塊設成快取點，多輪對話重送的歷史只算快取讀取價
       cache_control: { type: "ephemeral" },
@@ -157,6 +157,7 @@ async function runApi(userText: string, typed: string | null, stats: Stats, sign
   const model = pick?.model ?? modelOverride ?? currentModel(provider);
   if (!model) throw new Error(t("error.noModel"));
   S.chatModel = (pick ? pick.items.find((i) => i.value === model)?.label : provider === "anthropic" && ANTHROPIC_MODELS.find((m) => m.value === model)?.label) || model;
+  const effort = S.effort; // 思考深度跟模型一樣任務開始時釘住（cloud 後端只在建立任務時照當時的模型＋深度扣點，中途換更貴的會被 400）
   const session = crypto.randomUUID(); // 一個任務一個 id（只有 cloud 會送出去）
   const usage: Usage = { pages: 0, actions: 0, chars: 0 };
   const readLimit = readChars(); // 這個任務讀頁字數的上限；cloud 每次呼叫都帶 x-ba-read-chars
@@ -176,7 +177,7 @@ async function runApi(userText: string, typed: string | null, stats: Stats, sign
     signal.throwIfAborted();
     const pending = addItem({ kind: "pending" });
     unpend = () => { if (S.log.includes(pending)) removeItem(pending); };
-    const turn: TurnParams = { system, tools: turnTools, model, noTools: capped, signal, cloud, ...(cloud ? { headers: baHeaders("task", session, usage, readLimit) } : {}) };
+    const turn: TurnParams = { system, tools: turnTools, model, effort, noTools: capped, signal, cloud, ...(cloud ? { headers: baHeaders("task", session, usage, readLimit) } : {}) };
     let msg: Turn;
     try {
       stats.calls++;

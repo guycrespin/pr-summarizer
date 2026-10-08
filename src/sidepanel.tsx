@@ -8,8 +8,8 @@ import { viewerFor } from "./pdf";
 import { activeTab } from "./tools";
 import { PROVIDERS, PROVIDER_IDS, activeProvider, providerName, cleanBaseURL, conf, currentModel, isHaiku, type ProviderId } from "./providers";
 import { Select } from "./select";
-import { cloudModels } from "./cloud-models";
-import { t, currentLang } from "./i18n";
+import { cloudModels, estimateCredits } from "./cloud-models";
+import { t, currentLang, type Key } from "./i18n";
 import { LogList } from "./log";
 import { HistoryPage, SettingsPage, MemoryPage, SkillsPage, SkillEditorPage, SkillItem, Toast, ModelSelect, CloudModelSelect, type Route, type Nav } from "./pages";
 import {
@@ -154,6 +154,7 @@ function Composer() {
   const answering = !!S.asking?.reply && !!text.trim();
   const stopMode = S.busy && !answering;
   const model = S.mode === "cloud" ? cloudModels(S.me, conf("anthropic").model).model : currentModel(activeProvider()); // 現在實際會送出的模型
+  const est = S.mode === "cloud" ? estimateCredits(S.me, conf("anthropic").model, S.effort, S.pageChars) : null; // 送出前預估本次點數（只有 cloud）
   const submit = () => {
     if (answering) { S.asking!.reply!(text.trim(), []); setText(""); return; }
     if (!S.busy && text.trim()) setText("");
@@ -219,12 +220,16 @@ function Composer() {
           {S.mode === "cloud" ? <CloudModelSelect id="model" variant="bar" /> : <ModelSelect id="model" variant="bar" p={activeProvider()} />}
           {/* effort 是 Anthropic 的參數（cloud 固定是 Anthropic）；Haiku 不開 effort 與自適應思考 */}
           <Select id="effort" label={t("composer.effort")} title={t("composer.effortHint")} hidden={activeProvider() !== "anthropic" || isHaiku(model)} value={S.effort}
-            options={(["low", "medium", "high", "xhigh", "max"] as const).map((v) => ({ value: v, label: t(`effort.${v}`), hint: t(`effort.hint.${v}`) }))}
+            options={(["low", "medium", "high", "xhigh", "max"] as const).map((v) => {
+              const n = S.mode === "cloud" ? cloudModels(S.me, conf("anthropic").model).items.find((i) => i.value === model)?.effortCredits?.[v] : undefined; // cloud 才顯示每任務點數
+              return { value: v, label: t(`effort.${v}`), hint: [t(`effort.hint.${v}`), n != null && t(n === 1 ? "model.credit" : "model.credits", { n })].filter(Boolean).join(" · ") };
+            })}
             onChange={(v) => {
               S.effort = v;
               emit();
               persist({ effort: S.effort });
             }} />
+          {est && <span id="estimate" className="kbd-hint">{t(`composer.est${est.min ? "Min" : ""}${est.n === 1 ? "" : "s"}` as Key, { n: est.n })}</span>}
           <span className="spacer" />
           <span className="kbd-hint">{t("composer.enterHint")}</span>
           <button id="send" data-stop={stopMode ? "" : undefined} aria-label={stopMode ? t("composer.stop") : t("composer.send")}>

@@ -14,7 +14,7 @@ import fr from "../src/i18n/locales/fr";
 import zhTW from "../src/i18n/locales/zh-TW";
 import { LEGACY_BODIES } from "../src/legacy-skills";
 
-const EXT = fileURLToPath(new URL("../extension", import.meta.url));
+const EXT = fileURLToPath(new URL("../dist/e2e-ext", import.meta.url)); // e2e 專用的建置（package.json 的 test:e2e 產生），不碰使用者平常載入的 extension/
 const FIXTURE = `<!doctype html><meta charset=utf-8><title>fixture</title>
 <body style="margin:0">
 <div id=out></div>
@@ -67,7 +67,8 @@ const server = http.createServer((q, r) => {
 await new Promise((r) => server.once("listening", r));
 
 // ---------- 假的後端：POST /v1/devices、GET /v1/me、/welcome、/upgrade（契約見 .claude/notes/saas-v2.md 第 2 節）----------
-const BACKEND = "http://127.0.0.1:9394";
+const BACKEND_PORT = Number(process.env.E2E_PORT ?? 9394); // 預設 9394；埠被別的 e2e 佔著就設 E2E_PORT（npm run test:e2e 的 build 也會跟著指過去）
+const BACKEND = `http://127.0.0.1:${BACKEND_PORT}`;
 const be = { devices: [], me: [], pages: [] }; // 收到的請求：devices 是請求本體、me 是帶來的 x-api-key、pages 是 /welcome 與 /upgrade
 const issued = new Set();
 let meState = {
@@ -90,10 +91,11 @@ const backendSrv = http.createServer(async (q, r) => {
   }
   if (q.url.startsWith("/welcome") || q.url.startsWith("/upgrade")) { be.pages.push(q.url); r.setHeader("content-type", "text/html; charset=utf-8"); return r.end("<title>backend page</title>ok"); }
   r.statusCode = 404; r.end();
-}).listen(9394, "127.0.0.1");
+}).listen(BACKEND_PORT, "127.0.0.1");
 await new Promise((r, j) => { backendSrv.once("listening", r); backendSrv.once("error", j); });
 // ---------- 假的 OpenAI 相容伺服器（自訂供應商／自架 LLM 用）：GET /v1/models、POST /v1/chat/completions 回 SSE ----------
-const MOCK_PORT = 9391; // 測試用固定 port（9xxx）；本機另一個 9392 故意不開，用來驗「連不到」
+const PORT_SHIFT = BACKEND_PORT - 9394; // E2E_PORT 換了，其他 mock 埠（9391／9392／9393）一起平移，才不會撞到別的 e2e（之後新增的固定埠一律寫成「原埠 + PORT_SHIFT」）
+const MOCK_PORT = 9391 + PORT_SHIFT; // 測試用固定 port（9xxx）；本機另一個 9392 故意不開，用來驗「連不到」
 const mockReqs = [];
 let mockScript = [];
 const oaiChunk = (delta, finish = null) => `data: ${JSON.stringify({ id: "c", object: "chat.completion.chunk", choices: [{ index: 0, delta, finish_reason: finish }] })}\n\n`;
@@ -135,7 +137,7 @@ const mock = http.createServer(async (q, r) => {
 await new Promise((r, j) => { mock.once("listening", r); mock.once("error", j); });
 const PORT = server.address().port;
 // 攻擊者的伺服器：另一個 origin（不同 port）。安全測試斷言「使用者按允許之前它收到 0 個請求」
-const ATTACK_PORT = 9393;
+const ATTACK_PORT = 9393 + PORT_SHIFT;
 const attackReqs = [];
 const attacker = http.createServer((q, r) => { attackReqs.push(q.url); r.setHeader("content-type", "text/html; charset=utf-8"); r.end("<title>attacker</title>ok"); }).listen(ATTACK_PORT, "127.0.0.1");
 await new Promise((r, j) => { attacker.once("listening", r); attacker.once("error", j); });
@@ -522,7 +524,7 @@ try {
   await shot("settings-account");
   const upgradePage = ctx.waitForEvent("page");
   await panel.click("#account-upgrade");
-  assert.equal((await upgradePage).url(), "http://127.0.0.1:9394/upgrade?u=u-1", "升級按鈕開 upgrade_url");
+  assert.equal((await upgradePage).url(), `http://127.0.0.1:${BACKEND_PORT}/upgrade?u=u-1`, "升級按鈕開 upgrade_url");
   await (await upgradePage).close();
   await panel.bringToFront();
   // 展開進階區塊（舊金鑰還留在儲存區）：開關沒打開但可以自己切回 byok
@@ -1125,6 +1127,8 @@ try {
   await shot("select-model-anthropic");
   await panel.keyboard.press("Escape");
   await panel.click("#effort");
+  assert.equal(await panel.locator("#estimate").count(), 0, "byok 不顯示本次點數預估");
+  assert.deepEqual(await panel.locator("#effort-list [role=option] small").allTextContents(), ["low", "medium", "high", "xhigh", "max"].map((v) => zhTW[`effort.hint.${v}`]), "byok 的思考深度選單只有說明、不顯示點數");
   await shot("select-effort");
   await panel.keyboard.press("Escape");
 
@@ -1348,6 +1352,122 @@ try {
   await test.evaluate(() => longp.remove());
   assert.deepEqual(pageErrors, [], "整段沒有未捕捉的錯誤");
 
+  // ---------- cloud 的思考深度：每檔顯示每任務點數（照 /v1/me 的 effort_credits）、模型選單跟著深度變、任務開始時釘住 ----------
+  const EFFORTS = ["low", "medium", "high", "xhigh", "max"];
+  const SONNET_EC = { low: 1, medium: 2, high: 3, xhigh: 4, max: 5 }, OPUS_EC = { low: 3, medium: 4, high: 5, xhigh: 6, max: 7 };
+  const modelsBeforeEffort = meState.models;
+  meState = { ...meState, default_model: "claude-sonnet-5-5", models: [
+    { id: "claude-haiku-5-5", label: "Haiku 5.5", tier: "fast", credits: 1, locked: false },
+    { id: "claude-sonnet-5-5", label: "Sonnet 5.5", tier: "balanced", credits: 2, effort_credits: SONNET_EC, locked: false },
+    { id: "claude-opus-5-5", label: "Opus 5.5", tier: "best", credits: 4, effort_credits: OPUS_EC, locked: false },
+  ] };
+  await panel.evaluate(() => chrome.storage.local.set({ providers: { anthropic: { model: "claude-sonnet-5-5" } } }));
+  await panel.evaluate(() => chrome.storage.local.remove("effort"));
+  await panel.reload();
+  await panel.waitForSelector("#input", { state: "attached" });
+  await until(async () => (await panel.locator("#model").textContent()) === "Sonnet 5.5", "思考深度測試：選單沒顯示 Sonnet");
+  const smalls = (list) => panel.locator(`${list} [role=option]`).evaluateAll((els) => els.map((e) => [e.dataset.value, ...[...e.querySelectorAll("small")].map((x) => x.textContent)]));
+  const effortRows = (ec) => EFFORTS.map((v) => [v, `${zhTW[`effort.hint.${v}`]} · ${zhTW["model.credits"].replace("{n}", ec[v])}`]);
+  assert.equal(await panel.locator("#effort").textContent(), zhTW["effort.medium"], "預設思考深度是平衡");
+  await panel.click("#effort");
+  assert.deepEqual(await smalls("#effort-list"), effortRows(SONNET_EC), "Sonnet：每個深度的說明後面接「N 點／任務」（1 點用單數 key，文字相同）");
+  await panel.keyboard.press("Escape");
+  await panel.click("#model");
+  assert.deepEqual(await smalls("#model-list"), [
+    ["claude-haiku-5-5", `${zhTW["model.hint.haiku"]} · ${zhTW["model.credits"].replace("{n}", 1)}`],
+    ["claude-sonnet-5-5", `${zhTW["model.hint.sonnet"]} · ${zhTW["model.credits"].replace("{n}", 2)}`],
+    ["claude-opus-5-5", `${zhTW["model.hint.opus"]} · ${zhTW["model.credits"].replace("{n}", 4)}`],
+  ], "模型選單：有 effort_credits 的顯示目前深度（平衡）那一檔，Haiku 用 credits");
+  await panel.keyboard.press("Escape");
+  // 改選「深入」：模型選單的點數跟著變（Sonnet 3、Opus 5）
+  await panel.click("#effort");
+  await panel.locator('#effort-list [data-value="high"]').click();
+  await panel.click("#model");
+  assert.deepEqual((await smalls("#model-list")).map((r) => r[1].split(" · ")[1]), ["1 點／任務", "3 點／任務", "5 點／任務"], "改深度後模型選單的點數跟著變");
+  await panel.keyboard.press("Escape");
+  // 切到 Opus：深度選單用 Opus 的點數
+  await panel.click("#model");
+  await panel.locator('#model-list [data-value="claude-opus-5-5"]').click();
+  await panel.click("#effort");
+  assert.deepEqual(await smalls("#effort-list"), effortRows(OPUS_EC), "Opus：深度選單用 Opus 的點數");
+  await panel.keyboard.press("Escape");
+  await panel.click("#model");
+  await panel.locator('#model-list [data-value="claude-sonnet-5-5"]').click();
+  // 預設送 medium：先把深度改回預設（清掉存的、重載）
+  await panel.evaluate(() => chrome.storage.local.remove("effort"));
+  await panel.reload();
+  await panel.waitForSelector("#input", { state: "attached" });
+  await until(async () => (await panel.locator("#model").textContent()) === "Sonnet 5.5", "重載後選單沒顯示 Sonnet");
+  await run("深度預設", []);
+  await idle();
+  assert.equal(reqs[0].model, "claude-sonnet-5-5");
+  assert.equal(reqs[0].output_config?.effort, "medium", "沒動過選單：請求的 output_config.effort 預設是 medium");
+  // 釘住：第一輪回 tool_use，第一個請求到達時使用者把深度改成「最深入」，第二輪仍然是 medium
+  let flipped = false;
+  const flipEffort = async (route) => {
+    if (!flipped) { flipped = true; await panel.click("#effort"); await panel.locator('#effort-list [data-value="max"]').click(); }
+    await route.fallback();
+  };
+  await ctx.route(`${BACKEND}/v1/messages**`, flipEffort);
+  await run("任務中改深度", [{ type: "tool_use", id: "pin1", name: "scroll", input: { direction: "down" } }]);
+  await idle();
+  await ctx.unroute(`${BACKEND}/v1/messages**`, flipEffort);
+  assert.ok(flipped, "任務進行中有改到思考深度");
+  assert.equal(await panel.locator("#effort").textContent(), zhTW["effort.max"], "選單確實改成最深入");
+  assert.deepEqual(reqs.map((r) => r.output_config?.effort), ["medium", "medium"], "同一個任務的每一輪都用任務開始時的深度");
+  await run("下一個任務", []);
+  await idle();
+  assert.equal(reqs[0].output_config?.effort, "max", "下一個任務才用新選的深度");
+  // ---------- 送出前預估本次點數＋讀頁「全文」動態檔（read_levels 多一檔 chars_per_credit）----------
+  const readLevelsBefore = meState.read_levels;
+  meState = { ...meState, read_levels: [...readLevelsBefore, { chars: 100000, credits: 0, chars_per_credit: 10000 }] };
+  await panel.evaluate(() => chrome.storage.local.set({ pageChars: 8000 }));
+  await panel.evaluate(() => chrome.storage.local.remove("effort"));
+  await panel.reload();
+  await panel.waitForSelector("#input", { state: "attached" });
+  const est = async () => (await panel.locator("#estimate").count()) ? await panel.locator("#estimate").textContent() : null;
+  const estIs = (txt) => until(async () => (await est()) === txt, `預估文字要是「${txt}」`);
+  await estIs("本次 2 點"); // Sonnet、平衡、8,000 字
+  await panel.click("#effort");
+  await panel.locator('#effort-list [data-value="high"]').click();
+  await estIs("本次 3 點");
+  await openPageChars();
+  assert.deepEqual(await levelRows(), [
+    { value: "8000", label: "8,000 字", small: [], selected: "true" },
+    { value: "15000", label: "15,000 字", small: ["＋1 點／任務"], selected: "false" },
+    { value: "30000", label: "30,000 字", small: ["＋2 點／任務"], selected: "false" },
+    { value: "100000", label: "全文（最多 100,000 字）", small: ["每讀 10,000 字 ＋1 點"], selected: "false" },
+  ], "動態檔：標籤「全文（最多 N 字）」、提示「每讀 N 字 ＋1 點」（credits 為 0 不標加點）");
+  await panel.locator('#page-chars-list [data-value="15000"]').click();
+  await panel.keyboard.press("Escape");
+  await estIs("本次 4 點"); // 3 + 讀頁檔 1
+  await openPageChars();
+  await panel.locator('#page-chars-list [data-value="100000"]').click();
+  assert.equal(await pageChars(), 100000);
+  await panel.keyboard.press("Escape");
+  await estIs("本次至少 3 點"); // 動態檔：3 + 0，只是下限
+  // 選全文：請求的 x-ba-read-chars 是 100000，read_page 的上限就是 100000（沒有被夾小）
+  await test.evaluate(() => document.body.insertAdjacentHTML("afterbegin", `<p id=longp2>${"字".repeat(120000)}</p>`));
+  const fullHdrs = [];
+  const trackFull = async (route) => { fullHdrs.push(route.request().headers()["x-ba-read-chars"]); await route.fallback(); };
+  await ctx.route(`${BACKEND}/v1/messages**`, trackFull);
+  await run("讀全文", [{ type: "tool_use", id: "rdf", name: "read_page", input: {} }]);
+  await idle();
+  await ctx.unroute(`${BACKEND}/v1/messages**`, trackFull);
+  await test.evaluate(() => longp2.remove());
+  assert.deepEqual([...new Set(fullHdrs)], ["100000"], "全文檔：x-ba-read-chars 是 100000");
+  assert.match(lastResult(), /\[第 0–100000 字，全文 \d+ 字/, "全文檔：讀頁上限 100000 字");
+  // 換 Haiku（沒有 effort_credits）：用 credits 1，動態檔仍是「至少」
+  await panel.click("#model");
+  await panel.locator('#model-list [data-value="claude-haiku-5-5"]').click();
+  await estIs("本次至少 1 點");
+  await panel.evaluate(() => chrome.storage.local.set({ pageChars: 3000 })); // 還原成前面測試留下的 byok 值（後面的 byok 選單斷言假設是 3000）
+  await panel.evaluate(() => chrome.storage.local.remove("effort"));
+  await panel.reload();
+  await panel.waitForSelector("#input", { state: "attached" });
+  meState = { ...meState, models: modelsBeforeEffort, read_levels: readLevelsBefore };
+  assert.deepEqual(pageErrors, [], "思考深度整段沒有未捕捉的錯誤");
+
   // ---------- 設定頁進階區塊：新使用者自己從 cloud 切到 byok（沒有任何金鑰時開關不能打開）----------
   await panel.evaluate(() => chrome.storage.local.remove(["key", "model", "provider", "providers"]));
   await panel.reload();
@@ -1439,7 +1559,7 @@ try {
   await shot("onboard-provider-open");
   await panel.locator('#onboard-provider-list [data-value="custom"]').click();
   assert.equal(await panel.locator("#onboard-provider").textContent(), "自訂（OpenAI 相容）");
-  await panel.fill("#onboard-base", "localhost:9391");
+  await panel.fill("#onboard-base", `localhost:${MOCK_PORT}`);
   await panel.click("#onboard-form .btn-primary");
   assert.match(await panel.locator("#onboard-error").textContent(), /http:\/\//, "位址不是 http(s) 擋下來");
   await panel.fill("#onboard-base", `http://127.0.0.1:${MOCK_PORT}/v1/`);
@@ -1544,10 +1664,10 @@ try {
   assert.equal(chatReqs()[0].auth, undefined, "沒填金鑰就不送 Authorization");
   assert.ok(!hasBA(chatReqs()[0].headers));
   // 本機伺服器沒開：告訴使用者怎麼設
-  await panel.evaluate(() => chrome.storage.local.set({ providers: { custom: { baseURL: "http://127.0.0.1:9392/v1", model: "x" } } }));
+  await panel.evaluate((port) => chrome.storage.local.set({ providers: { custom: { baseURL: `http://127.0.0.1:${port}/v1`, model: "x" } } }), 9392 + PORT_SHIFT);
   await panel.reload();
   await oaiRun("hi", []);
-  assert.match(await panel.locator(".msg.error").last().textContent(), /連不到 http:\/\/127\.0\.0\.1:9392.*OLLAMA_ORIGINS=chrome-extension:\/\/\*/);
+  assert.match(await panel.locator(".msg.error").last().textContent(), new RegExp(`連不到 http://127\\.0\\.0\\.1:${9392 + PORT_SHIFT}.*OLLAMA_ORIGINS=chrome-extension://\\*`));
 
   // 介面語言：設定成英文後，首頁標題與輸入框提示都是英文（期望值寫死，不讀 en.ts：字典被改壞要會紅）
   await panel.evaluate(() => chrome.storage.local.set({ lang: "en" }));

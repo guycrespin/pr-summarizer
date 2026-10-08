@@ -233,8 +233,8 @@ export function SettingsPage({ nav }: { nav: Nav }) {
   const read = cloudReadLevels(S.me, S.pageChars);
   const pageCharsOptions: Opt[] = cloud
     ? read.levels.map((l) => ({
-      value: String(l.chars), label: t("settings.readChars", { n: l.chars.toLocaleString(currentLang()) }),
-      hint: l.credits > 0 ? t(l.credits === 1 ? "settings.readExtra" : "settings.readExtras", { n: l.credits }) : undefined,
+      value: String(l.chars), label: t(l.chars_per_credit ? "settings.readFull" : "settings.readChars", { n: l.chars.toLocaleString(currentLang()) }),
+      hint: [l.credits > 0 && t(l.credits === 1 ? "settings.readExtra" : "settings.readExtras", { n: l.credits }), l.chars_per_credit && t("settings.readPerCredit", { n: l.chars_per_credit.toLocaleString(currentLang()) })].filter(Boolean).join(" · ") || undefined,
     }))
     : PAGE_CHARS.map(([n, k]) => {
       const num = n.toLocaleString(currentLang());
@@ -381,11 +381,13 @@ export function ModelSelect({ id, variant, p }: { id: string; variant: "bar" | "
 // 鎖住的（方案不夠）顯示鎖頭和「需升級方案」，點了開升級頁、不能選
 export function CloudModelSelect({ id, variant }: { id: string; variant: "bar" | "field" }) {
   const { items, model } = cloudModels(S.me, conf("anthropic").model);
-  const options: Opt[] = items.map((m) => ({
+  const options: Opt[] = items.map((m) => {
+    const n = m.effortCredits?.[S.effort as keyof NonNullable<typeof m.effortCredits>] ?? m.credits; // 目前選的深度那一檔；Haiku、舊版後端沒有就用 credits
+    return {
     value: m.value, label: m.label,
-    hint: [m.hint && t(m.hint), m.credits != null && t(m.credits === 1 ? "model.credit" : "model.credits", { n: m.credits })].filter(Boolean).join(" · ") || undefined,
+    hint: [m.hint && t(m.hint), n != null && t(n === 1 ? "model.credit" : "model.credits", { n })].filter(Boolean).join(" · ") || undefined,
     ...(m.locked ? { locked: t("model.locked") } : {}),
-  }));
+  };});
   const set = (v: string) => {
     if (items.find((m) => m.value === v)?.locked) { openUpgrade(); return; }
     conf("anthropic").model = v; emit(); persistProviders();
