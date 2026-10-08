@@ -14,3 +14,7 @@ export function detectMode(saved: { mode?: unknown; key?: unknown; providers?: u
   const configured = filled(saved.key) || Object.values((saved.providers ?? {}) as Record<string, any>).some((c) => filled(c?.key) || filled(c?.baseURL));
   return configured ? "byok" : "cloud";
 }
+
+// 首頁「依頁面產生建議」沒手動改過開關的預設值：
+// cloud 預設開（費用由我們出、算在每月 aux 額度）；byok 照舊——新使用者關（不在背景花使用者的錢），最舊版有 key 欄位的開
+export const defaultSuggestOn = (mode: Mode, legacyKey: unknown) => mode === "cloud" || !!legacyKey;

@@ -275,6 +275,8 @@ try {
   await until(() => be.me.length >= 1, "cloud 同意後沒有抓 /v1/me");
   assert.equal(be.devices.length, 1, "側邊欄沿用背景註冊的 token，不重複註冊");
   assert.equal((await panel.evaluate(() => chrome.storage.local.get("consent"))).consent, true, "同意狀態存進 storage");
+  // cloud 沒手動改過首頁建議開關：預設開，同意後依頁面產生建議（aux）
+  await until(() => msgHeaders.some((h) => h["x-ba-kind"] === "aux"), "cloud 同意後首頁建議沒有送出（沒手動改過開關的 cloud 使用者預設開）");
 
   // ---------- 舊使用者（模擬升級前的儲存區：只有舊金鑰與模型、首頁建議開著、沒有同意紀錄、沒有 mode、沒註冊過裝置）----------
   // 升級後維持 byok：金鑰照舊保留、同意前不打任何請求；同意後用自己的 Key 直連 Anthropic，
@@ -283,11 +285,12 @@ try {
   await panel.evaluate(() => chrome.storage.local.set({ key: "sk-ant-test", model: "claude-haiku-4-5", suggestOn: true, lang: "zh-TW" }));
   await settle();
   const touches0 = touches();
+  const hits0 = apiHits; // 上面 cloud 段落的首頁建議已經打過；這裡只看重新載入之後有沒有增加
   await panel.reload();
   await panel.waitForSelector("#consent-agree", { state: "attached" });
   await panel.waitForTimeout(600); // 給首頁建議的 400ms debounce 一點餘裕，確認它也沒有偷跑
   assert.equal(await panel.evaluate(() => document.body.dataset.view), "consent", "舊版 key 欄位：升級後也要先同意過");
-  assert.equal(apiHits, 0, "舊使用者同意前，連首頁建議都不能打 /v1/messages");
+  assert.equal(apiHits, hits0, "舊使用者同意前，連首頁建議都不能打 /v1/messages");
   assert.equal(byokReqs.length, 0, "舊使用者同意前，連首頁建議都不能打 Anthropic");
   assert.equal(touches(), touches0, "舊使用者同意前不碰後端");
   assert.deepEqual(await panel.evaluate(() => chrome.storage.local.get(["mode", "key", "model"])), { mode: "byok", key: "sk-ant-test", model: "claude-haiku-4-5" }, "升級後維持 byok、舊金鑰與模型照舊保留（不刪）");
@@ -312,7 +315,7 @@ try {
   assert.match(await panel.locator("#log .md").last().textContent(), /byok 回覆/);
   // byok 的用量列：原本的 token 顯示＋照官方價估計的美元（(10000×0.10 + 40000×0.01 + 5000×0.125 + 2000×0.50) ÷ 10⁶ ＝ $0.003025）；不顯示點數
   assert.equal(await panel.locator(".msg.stats").last().textContent(), "輸入 55.0k（快取 40.0k） · 輸出 2.0k token · ≈ $0.0030");
-  assert.equal(apiHits, 0, "byok 沒有任何 /v1/messages 打到後端");
+  assert.equal(apiHits, hits0, "byok 沒有任何 /v1/messages 打到後端");
   assert.equal(touches(), touches0, "byok 整個過程沒有任何請求打到後端位址（不註冊裝置、不打 /v1/me）");
   assert.deepEqual(await panel.evaluate(() => chrome.storage.local.get(["deviceToken", "userId"])), {}, "byok 沒有註冊裝置");
   // 設定頁：byok 時帳號區塊是一行說明＋「改用 Browser Agent Cloud」；進階區塊預設收合，展開看得到舊金鑰
@@ -371,17 +374,21 @@ try {
   // 契約標頭（.claude/notes/saas-v2.md 第 2 節）：x-api-key＝device_token、一個任務一個 x-ba-session、x-ba-stats 是累計值、x-ba-kind=task
   const devToken = (await panel.evaluate(() => chrome.storage.local.get("deviceToken"))).deviceToken;
   assert.match(devToken, /^ba_dev_test\d{4}$/);
-  assert.equal(msgHeaders.length, 12, "12 次 /v1/messages");
-  for (const h of msgHeaders) {
+  // 首頁建議（aux）另外驗；下面的契約只看任務本身的呼叫
+  const auxHeaders = msgHeaders.filter((h) => h["x-ba-kind"] === "aux");
+  assert.ok(auxHeaders.length >= 1 && auxHeaders.every((h) => issued.has(h["x-api-key"])), "首頁建議走 aux、帶我們發的 device_token（中途重新註冊過，所以比對發過的全部 token）");
+  const taskHeaders = msgHeaders.filter((h) => h["x-ba-kind"] !== "aux");
+  assert.equal(taskHeaders.length, 12, "12 次 /v1/messages");
+  for (const h of taskHeaders) {
     assert.equal(h["x-api-key"], devToken, "x-api-key＝device_token");
     assert.match(h["x-ba-session"], /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     assert.equal(h["x-ba-kind"], "task");
     assert.match(h["x-ba-stats"], /^pages=\d+;actions=\d+;chars=\d+$/);
     assert.equal(h["x-ba-read-chars"], "8000", "每次呼叫都帶目前那一檔的讀頁字數（預設 8000）");
   }
-  assert.equal(new Set(msgHeaders.map((h) => h["x-ba-session"])).size, 1, "一個任務一個 session");
-  assert.equal(msgHeaders[0]["x-ba-stats"], "pages=0;actions=0;chars=0", "第一次呼叫：還沒讀過頁面");
-  assert.match(msgHeaders.at(-1)["x-ba-stats"], /^pages=1;actions=10;chars=[1-9]\d*$/, "累計：1 次 read_page、10 次 click／type／scroll");
+  assert.equal(new Set(taskHeaders.map((h) => h["x-ba-session"])).size, 1, "一個任務一個 session");
+  assert.equal(taskHeaders[0]["x-ba-stats"], "pages=0;actions=0;chars=0", "第一次呼叫：還沒讀過頁面");
+  assert.match(taskHeaders.at(-1)["x-ba-stats"], /^pages=1;actions=10;chars=[1-9]\d*$/, "累計：1 次 read_page、10 次 click／type／scroll");
   assert.ok(be.me.length >= 1 && be.me.at(-1) === devToken && be.me.every((k) => issued.has(k)), "/v1/me 帶 x-api-key＝device_token");
 
   // 步數上限：模型永遠要捲動，第 30 步之後應該改成 tool_choice none、只回文字
@@ -393,7 +400,8 @@ try {
   assert.equal(loopCalls, 31);
   assert.deepEqual(lastToolChoice, { type: "none" });
   assert.match(await panel.locator(".msg.stats").textContent(), /^30 步/);
-  assert.notEqual(msgHeaders.at(-1)["x-ba-session"], msgHeaders[0]["x-ba-session"], "新任務換新的 session");
+  const tasksNow = msgHeaders.filter((h) => h["x-ba-kind"] !== "aux");
+  assert.notEqual(tasksNow.at(-1)["x-ba-session"], tasksNow[0]["x-ba-session"], "新任務換新的 session");
 
   // 預設技能：新安裝 12 個都有、名稱固定英文（不隨介面語言）；已有技能的舊使用者補上新的、刪掉後不再加回
   const DEFAULTS = ["summarize", "grill-me", "translate", "extract", "compare", "explain", "thread", "reply", "fill-form", "review-pr", "checklist", "decide"];

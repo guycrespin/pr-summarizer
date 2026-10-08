@@ -7,7 +7,7 @@ import { HAIKU, migrateModel } from "./models";
 import { cloudModels } from "./cloud-models";
 import { usdOf, fmtUsd } from "./pricing";
 import { PROVIDERS, ANTHROPIC_MODELS, ProviderError, activeProvider, conf, currentModel, isHaiku, readChars, ready, streamChat, type ProviderId, type Turn } from "./providers";
-import { detectMode, type Mode } from "./mode";
+import { defaultSuggestOn, detectMode, type Mode } from "./mode";
 import { PAGE_TOOLS, ACTION_TOOLS, type Usage, charsOf, baHeaders, isQuota, isModelNotInPlan } from "./usage";
 import { BACKEND, BackendError, authFetch, fetchMe, getToken } from "./backend";
 import { chatTitle, upsertChat, displayText, selectionOf, withSelection, stripDocuments, type Chat, type Block } from "./history";
@@ -379,6 +379,8 @@ export async function setMode(mode: Mode) {
   emit();
   await persist({ mode });
   if (mode === "cloud") refreshMe(); // 第一次用 cloud 會在這裡註冊匿名裝置
+  const s = await chrome.storage.local.get(["suggestOn", "key"]);
+  if (s.suggestOn === undefined) S.suggestOn = defaultSuggestOn(mode, s.key); // 沒手動改過首頁建議開關：跟著新模式的預設
   if (S.view !== "chat" || (mode === "byok" && !ready())) showView(); // 從首次設定頁改用 cloud → 進對話；byok 沒金鑰 → 首次設定頁
   else scheduleSuggestions();
 }
@@ -509,8 +511,6 @@ export async function init() {
   S.memories = saved.memories ?? [];
   S.memoryOn = saved.memoryOn ?? true;
   if (saved.pageChars) S.pageChars = saved.pageChars;
-  // 首頁建議：新使用者預設關閉；舊版（有 key 欄位）沒改過設定的照舊開著
-  S.suggestOn = saved.suggestOn ?? !!saved.key;
   // 舊版只有 key／model 兩個欄位＝Anthropic 的金鑰與模型，升級後不用重填
   S.providers = saved.providers ?? (saved.key ? { anthropic: { key: saved.key, ...(saved.model ? { model: saved.model } : {}) } } : {});
   if (saved.provider && saved.provider in PROVIDERS) S.provider = saved.provider;
@@ -522,6 +522,7 @@ export async function init() {
   }
   // 模式：全新安裝是 cloud；升級前已經設定過金鑰或自訂位址的舊使用者維持 byok（金鑰照舊留著，不扣點、不碰我們的後端）。見 mode.ts
   S.mode = detectMode(saved);
+  S.suggestOn = saved.suggestOn ?? defaultSuggestOn(S.mode, saved.key); // 首頁建議：沒手動改過的照模式給預設值
   if (saved.mode !== S.mode) await persist({ mode: S.mode });
   if (saved.effort) S.effort = saved.effort;
 

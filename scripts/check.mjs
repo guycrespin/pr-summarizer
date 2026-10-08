@@ -248,7 +248,7 @@ import { S } from "../src/store";
 console.log("cloud-read-levels: all checks passed");
 
 // ---------- 模式：全新安裝 cloud；升級前設定過金鑰或自訂位址的舊使用者維持 byok ----------
-import { detectMode } from "../src/mode";
+import { defaultSuggestOn, detectMode } from "../src/mode";
 {
   assert.equal(detectMode({}), "cloud", "全新安裝");
   assert.equal(detectMode({ key: "sk-ant-x" }), "byok", "最舊版：只有 key 欄位");
@@ -262,6 +262,9 @@ import { detectMode } from "../src/mode";
   assert.equal(detectMode({ mode: "byok" }), "byok");
   assert.equal(detectMode({ mode: "weird", key: "k" }), "byok", "不認得的值當作沒存過");
   assert.equal(detectMode({ providers: null }), "cloud");
+  assert.equal(defaultSuggestOn("cloud", undefined), true, "cloud 全新安裝：首頁建議預設開");
+  assert.equal(defaultSuggestOn("byok", undefined), false, "byok 新使用者：預設關，不在背景花使用者的錢");
+  assert.equal(defaultSuggestOn("byok", "sk-ant-x"), true, "最舊版有 key 欄位：照舊開");
 }
 console.log("mode: all checks passed");
 
