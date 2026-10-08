@@ -7,7 +7,7 @@ export const MAX_CHATS = 30; // ponytail: 超過就丟最舊的；一筆含讀�
 export type Block = { type: string; text?: string; name?: string; input?: unknown; id?: string; tool_use_id?: string; content?: unknown; is_error?: boolean };
 export type Message = { role: "user" | "assistant"; content: string | Block[] };
 // model：存檔時用的模型名稱（匯出 Markdown 的助理標題用；舊紀錄沒有）
-export type Chat = { id: string; title: string; updated: number; messages: Message[]; model?: string };
+export type Chat = { id: string; title: string; updated: number; messages: Message[]; model?: string; sources?: { url: string; title: string }[] }; // sources：研究來源（舊紀錄沒有）
 
 // 頁面上選取的文字附在使用者訊息最後面。這個格式也是歷史紀錄的一部分，不要改（displayText／selectionOf 靠它還原）
 const SEL_RE = /\n\n<page_selection chars="(\d+)">\n([\s\S]*)\n<\/page_selection>\n[^\n]*$/;
@@ -73,6 +73,10 @@ export function toMarkdown(chat: Chat) {
       else if (b.type === "tool_use") out.push("", `> ${t("history.tool")} \`${b.name}\` ${JSON.stringify(b.input)}`);
     }
   }
+  // 回答裡引用到的研究來源 [n]
+  const cited = new Set([...out.join("\n").matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1])));
+  const refs = (chat.sources ?? []).flatMap((x, i) => (cited.has(i + 1) ? [`- [${i + 1}] [${x.title.replace(/[[\]]/g, "")}](${x.url})`] : []));
+  if (refs.length) out.push("", `## ${t("sources.title")}`, "", ...refs);
   return out.join("\n") + "\n";
 }
 

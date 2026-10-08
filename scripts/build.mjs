@@ -25,7 +25,9 @@ const opts = {
   bundle: true, splitting: true, format: "esm", target: "chrome122",
   outdir: ext, chunkNames: "chunks/[name]-[hash]",
   // 後端位址：build 時用環境變數 BA_BACKEND 覆寫（上架版指向正式後端），預設是本機開發用的 4410
-  define: { "process.env.NODE_ENV": '"production"', BA_BACKEND: JSON.stringify(process.env.BA_BACKEND ?? "http://localhost:4410") },
+  define: { "process.env.NODE_ENV": '"production"', BA_BACKEND: JSON.stringify(process.env.BA_BACKEND ?? "http://localhost:4410"),
+    // 研究功能的搜尋網址（後面直接接關鍵字）：e2e 用 BA_SEARCH 換成本機的假結果頁
+    BA_SEARCH: JSON.stringify(process.env.BA_SEARCH ?? "https://www.google.com/search?q=") },
   logLevel: "warning",
   minify: !watch, // watch 模式不 minify，rebuild 快；上架用的 build／package 都會 minify
 };

@@ -42,7 +42,8 @@ export async function isPdfUrl(url = ""): Promise<boolean> {
 }
 
 // file:// 要使用者在擴充功能詳細資料頁打開「允許存取檔案網址」；fetch 不支援 file:，用 XHR
-export async function fetchPdf(url: string): Promise<ArrayBuffer> {
+// allow：研究讀取用，轉址後的最終網址不被允許（本機、內網）就不讀內容
+export async function fetchPdf(url: string, allow?: (finalUrl: string) => boolean): Promise<ArrayBuffer> {
   if (url.startsWith("file:")) {
     if (!(await chrome.extension.isAllowedFileSchemeAccess())) throw new PdfError("file access off", "fileAccess");
     return new Promise((resolve, reject) => {
@@ -56,6 +57,7 @@ export async function fetchPdf(url: string): Promise<ArrayBuffer> {
   }
   const res = await fetch(url, { credentials: "include" }).catch(() => null);
   if (!res?.ok) throw new PdfError(`下載 PDF 失敗${res ? `（HTTP ${res.status}）` : ""}`, "fetch");
+  if (allow && !allow(res.url || url)) throw new PdfError("這個網址被轉到本機或內網的位址，已停止讀取", "fetch");
   return res.arrayBuffer();
 }
 

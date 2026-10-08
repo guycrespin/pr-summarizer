@@ -3,6 +3,7 @@ import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "reac
 import { createPortal } from "react-dom";
 import { marked } from "marked";
 import DOMPurify from "dompurify";
+import type { Source } from "./shared";
 import { S, emit, setMemories, type Item, type MdItem, type ThinkingItem, type ToolItem, type AskItem, type FileItem, type ConfirmItem, type MemoryItem, type PageItem } from "./store";
 import { forgetMemory } from "./memory";
 import { t, currentLang, type Key } from "./i18n";
@@ -43,6 +44,37 @@ const PURIFY = {
 };
 const renderMd = (text: string) => DOMPurify.sanitize(marked.parse(text, { gfm: true, breaks: true }) as string, PURIFY);
 
+// 回答裡的 [n] 換成來源連結：只認這段對話登記過的編號（S.sources，程式登記的、不是模型寫的網址），程式碼與既有連結裡的不動。
+// 在消毒後的 DOM 上用 createElement 加，不拼 HTML 字串。used：有連到的編號（照出現順序），給下面的「來源」清單
+export function cite(html: string, sources: Source[]): { html: string; used: number[] } {
+  const used: number[] = [];
+  if (!sources.length || !/\[\d+\]/.test(html)) return { html, used };
+  const tpl = document.createElement("template");
+  tpl.innerHTML = html;
+  const walk = document.createTreeWalker(tpl.content, NodeFilter.SHOW_TEXT);
+  const texts: Text[] = [];
+  for (let n = walk.nextNode(); n; n = walk.nextNode()) if (!n.parentElement?.closest("a, code, pre")) texts.push(n as Text);
+  for (const node of texts) {
+    const parts = node.data.split(/(\[\d+\])/);
+    if (parts.length === 1) continue;
+    node.replaceWith(...parts.map((p) => {
+      const n = /^\[\d+\]$/.test(p) ? Number(p.slice(1, -1)) : 0;
+      const src = sources[n - 1];
+      if (!src || !/^https?:\/\//.test(src.url)) return p;
+      if (!used.includes(n)) used.push(n);
+      const a = document.createElement("a");
+      a.className = "cite";
+      a.href = src.url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.title = `${src.title}\n${src.url}`;
+      a.textContent = p;
+      return a;
+    }));
+  }
+  return { html: tpl.innerHTML, used };
+}
+
 export function CopyButton({ getText, label, cls = "copy" }: { getText: () => string; label?: string; cls?: string }) {
   const [done, setDone] = useState(false);
   return (
@@ -59,9 +91,9 @@ export function CopyButton({ getText, label, cls = "copy" }: { getText: () => st
   );
 }
 
-// 助理的一段 Markdown 回覆：串流結束後幫程式碼區塊加複製鈕（portal 進消毒後的 <pre>）
+// 助理的一段 Markdown 回覆：串流結束後幫程式碼區塊加複製鈕（portal 進消毒後的 <pre>）；有引用 [n] 就在下面列出來源
 function Md({ item }: { item: MdItem }) {
-  const html = useMemo(() => renderMd(item.text), [item.text]);
+  const { html, used } = useMemo(() => cite(renderMd(item.text), S.sources), [item.text, S.sources.length]);
   const body = useRef<HTMLDivElement>(null);
   const [pres, setPres] = useState<HTMLPreElement[]>([]);
   useLayoutEffect(() => { setPres(item.done ? [...body.current!.querySelectorAll("pre")] : []); }, [item.done, html]);
@@ -69,6 +101,21 @@ function Md({ item }: { item: MdItem }) {
     <div className="msg assistant">
       <div className="md" ref={body} dangerouslySetInnerHTML={{ __html: html }} />
       {pres.map((pre, i) => createPortal(<CopyButton getText={() => pre.querySelector("code")?.textContent ?? pre.textContent ?? ""} />, pre, i))}
+      {item.done && used.length > 0 && (
+        <div className="sources">
+          <div className="sources-title">{t("sources.title")}</div>
+          <ul>
+            {used.map((n) => (
+              <li key={n}>
+                <a href={S.sources[n - 1].url} target="_blank" rel="noopener noreferrer" title={S.sources[n - 1].url}>
+                  <span className="cite-n">[{n}]</span> {S.sources[n - 1].title}
+                </a>
+                <span className="sources-host">{hostOf(S.sources[n - 1].url)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {item.done && <div className="msg-actions"><CopyButton getText={() => item.text} label={t("common.copy")} /></div>}
     </div>
   );
@@ -94,6 +141,8 @@ function toolLabel(item: ToolItem) {
   const i = (item.input ?? {}) as Record<string, unknown>;
   switch (item.name) {
     case "navigate": return t("tool.navigate", { url: String(i.url ?? "") });
+    case "search_web": return t("tool.search_web", { query: String(i.query ?? "") });
+    case "read_url": return t("tool.read_url", { host: hostOf(String(i.url ?? "")) });
     case "type": return t("tool.type", { text: String(i.text ?? "") });
     case "use_skill": return t("tool.use_skill", { name: String(i.name ?? "") });
     case "create_file": return t("tool.create_file", { name: String(i.filename ?? "") });

@@ -6,6 +6,7 @@ import type { Chat, Message } from "./history";
 import type { ProviderId, ProviderConf } from "./providers";
 import type { Me } from "./backend";
 import type { Mode } from "./mode";
+import type { Source } from "./shared";
 
 export type UserItem = { id: number; kind: "user"; text: string; selection?: string }; // selection：這則附帶的頁面選取內容
 export type NoteItem = { id: number; kind: "error" | "note"; text: string };
@@ -42,11 +43,13 @@ export const S = {
   pageChars: 8000, // 讀頁一次最多回傳的字數。中文約 1 字 1 token：整頁維基 5.5 萬字＝5 萬 token，一次摘要就要好幾塊台幣
   suggestOn: false,
   memoryOn: true,
+  summarizePages: true, // read_url 讀到的頁面先用 Haiku 依問題整理；A/B 量成本時在 devtools 跑 chrome.storage.local.set({ summarizePages: false })（側邊欄重開生效）
   memories: [] as string[],
   skills: [] as Skill[],
   chats: [] as Chat[], // 對話歷史，見 history.ts
   chatId: null as string | null, // 目前這段對話在 chats 裡的 id；新對話在第一次存檔時才建立
   messages: [] as Message[], // 目前對話，送給 API 的格式
+  sources: [] as Source[], // 目前對話的研究來源，[n]＝第 n 個（存進歷史；回答裡的 [n] 照它變成連結）
   log: [] as Item[], // 畫面上的對話紀錄
   busy: false,
   // 首頁建議：list 為 null＝顯示固定建議；sub 為 null＝預設副標
